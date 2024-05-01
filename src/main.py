@@ -3,4 +3,5 @@
 
 
 if __name__ == "__main__":
-  ### start of main ###
+  ## start of main ##
+  return 0
