@@ -53,7 +53,7 @@ def main():
     print()
     print(grid_world.render())
     parse_print_info(info)
-    for _ in range(10):
+    for _ in range(1000):
         actions = grid_world.action_space.sample()
         print_actions(actions)
         observation, reward, terminated, truncated, info = grid_world.step(actions)

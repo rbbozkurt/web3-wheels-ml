@@ -275,7 +275,7 @@ class GridWorldEnv(gym.Env):
         """
         self.grid_map[
             passenger.pick_up_loc[0], passenger.pick_up_loc[1]
-        ] = entity_symbols["Empty"]
+        ] = entity_symbols["Free"]
         self.grid_map[
             passenger.drop_off_loc[0], passenger.drop_off_loc[1]
         ] = vehicle.grid_mark()
@@ -294,7 +294,7 @@ class GridWorldEnv(gym.Env):
         """
         self.grid_map[
             passenger.drop_off_loc[0], passenger.drop_off_loc[1]
-        ] = entity_symbols["Empty"]
+        ] = entity_symbols["Free"]
         self.grid_map[vehicle.loc[0], vehicle.loc[1]] = vehicle.grid_mark()
 
     def _update_map_after_move(self, vehicle, old_loc):
@@ -308,7 +308,7 @@ class GridWorldEnv(gym.Env):
         Returns:
             None
         """
-        self.grid_map[old_loc[0], old_loc[1]] = entity_symbols["Empty"]
+        self.grid_map[old_loc[0], old_loc[1]] = entity_symbols["Free"]
         self.grid_map[vehicle.loc[0], vehicle.loc[1]] = vehicle.grid_mark()
 
     def _step_action_pickup(self, vehicle):
@@ -368,7 +368,7 @@ class GridWorldEnv(gym.Env):
 
         passenger = vehicle.passenger
         vehicle.passenger = None
-        self.vehicles.pop(passenger.id)
+        self.passengers.pop(passenger.id)
         vehicle.total_rides += 1
         vehicle.total_earnings += passenger.ride_price
         self._update_map_after_dropoff(vehicle, passenger)
@@ -406,6 +406,8 @@ class GridWorldEnv(gym.Env):
             return False
         old_loc = vehicle.loc.copy()
         vehicle.loc = new_loc
+        print("New location: ", vehicle.loc)
+        print("Old location: ", old_loc)
         # Update passenger location if there is one
         if vehicle.passenger is not None:
             vehicle.passenger.loc = new_loc
@@ -449,21 +451,27 @@ class GridWorldEnv(gym.Env):
                 initial_vehicle_loc = vehicle.loc.copy()
                 direction = Action_To_Direction[action]
                 new_vehicle_loc = initial_vehicle_loc + direction
-                if self._is_in_bounds(new_vehicle_loc):
-                    reward += REWARDS.SUCCESS_MOVE
+                if not self._is_in_bounds(new_vehicle_loc):
+                    print("New location out of bounds: ", new_vehicle_loc)
+                    reward += REWARDS.OUT_OF_BOUNDS
                 elif self._is_location_occupied(new_vehicle_loc):
+                    print("New location occupied: ", new_vehicle_loc)
                     reward += REWARDS.COLLISION
                 # Check if the vehicle has enough fuel to move
-                elif not vehicle.fuel_level - vehicle.fuel_consumption >= 0:
+                elif not (vehicle.fuel_level - vehicle.fuel_consumption >= 0):
                     # Check if the vehicle has a passenger
+                    print("No fuel: ")
                     if vehicle.passenger is not None:
+                        print("No fuel with passenger: ")
                         reward += REWARDS.INSUFFICIENT_FUEL_W_PASSENGER
                     else:
                         reward += REWARDS.INSUFFICIENT_FUEL
                         # if there is no fuel, check if there is a gas station around
                         if not self._is_gas_station_around(initial_vehicle_loc):
                             truncated = True
+                            print("Truncated: ")
                 else:
+                    print("Moving: ")
                     self._step_action_move(vehicle, new_vehicle_loc)
                     reward += REWARDS.SUCCESS_MOVE
 
