@@ -81,6 +81,7 @@ def train(
 
 
 env = gym.make("Taxi-v3", render_mode="rgb_array")
+
 state_space = env.observation_space.n
 action_space = env.action_space.n
 
