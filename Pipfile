@@ -17,16 +17,11 @@ pytest-env = "==1.0.1"
 myst_parser = "==2.0.0"
 
 [packages]
-autocorrect = "==2.6.1"
-colorama = "==0.4.6"
-fsspec = "==2023.12.2"
-lightgbm = "==4.3.0"
-pylanguagetool = "==0.10.0"
-pyspellchecker = "==0.7.2"
-python-dotenv = "==0.21.0"
-reportlab = "==4.0.7"
-s3fs = "==2023.12.2"
 pre-commit = "*"
+cloudpickle = "==3.0.0"
+farama-notifications = "==0.0.4"
+gymnasium = "==0.29.1"
+numpy = "==1.26.4"
 
 [requires]
 python_version = "3.10"
