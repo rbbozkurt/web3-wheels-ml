@@ -10,9 +10,18 @@ from gymnasium import spaces
 
 from .utils import *
 
+FPS = 4
+
 
 class GridWorldEnv(gym.Env):
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
+    metadata = {
+        "render_modes": [
+            "human",
+            "rgb_array",
+            "state_pixels",
+        ],
+        "render_fps": FPS,
+    }
 
     def __init__(
         self,
@@ -278,8 +287,21 @@ class GridWorldEnv(gym.Env):
         ] = entity_symbols["Free"]
         self.grid_map[
             passenger.drop_off_loc[0], passenger.drop_off_loc[1]
-        ] = vehicle.grid_mark()
+        ] = passenger.grid_mark()
         self.grid_map[vehicle.loc[0], vehicle.loc[1]] = vehicle.grid_mark()
+        print(
+            "Map updated after pickup:"
+            + "\n"
+            + "Pick up location : {}".format(
+                passenger.pick_up_loc[0], passenger.pick_up_loc[1]
+            )
+            + "\n"
+            + "Drop off location : {}".format(
+                passenger.drop_off_loc[0], passenger.drop_off_loc[1]
+            )
+            + "\n"
+            + "Vehicle location : {}".format(vehicle.loc[0], vehicle.loc[1])
+        )
 
     def _update_map_after_dropoff(self, vehicle, passenger):
         """
@@ -296,6 +318,15 @@ class GridWorldEnv(gym.Env):
             passenger.drop_off_loc[0], passenger.drop_off_loc[1]
         ] = entity_symbols["Free"]
         self.grid_map[vehicle.loc[0], vehicle.loc[1]] = vehicle.grid_mark()
+        print(
+            "Map updated after dropoff:"
+            + "\n"
+            + "Drop off location : {}".format(
+                passenger.drop_off_loc[0], passenger.drop_off_loc[1]
+            )
+            + "\n"
+            + "Vehicle location : {}".format(vehicle.loc[0], vehicle.loc[1])
+        )
 
     def _update_map_after_move(self, vehicle, old_loc):
         """
@@ -310,6 +341,13 @@ class GridWorldEnv(gym.Env):
         """
         self.grid_map[old_loc[0], old_loc[1]] = entity_symbols["Free"]
         self.grid_map[vehicle.loc[0], vehicle.loc[1]] = vehicle.grid_mark()
+        print(
+            "Map updated after move:"
+            + "\n"
+            + "Old loc : {}".format(self.grid_map[old_loc[0], old_loc[1]])
+            + "\n"
+            + "New location : {}".format(self.grid_map[vehicle.loc[0], vehicle.loc[1]])
+        )
 
     def _step_action_pickup(self, vehicle):
         """
@@ -321,19 +359,23 @@ class GridWorldEnv(gym.Env):
         Returns:
             bool: True if the passenger was successfully picked up, False otherwise.
         """
+        print("Picking up: ")
         is_passenger_around, passenger_id = self._is_passenger_around_for_pickup(
             vehicle.loc
         )
         if not is_passenger_around:
+            print("No passenger around: ")
             return False
         passenger = self.passengers[passenger_id]
         # Check if a passenger is already in a vehicle
         if vehicle.passenger is not None:
+            print("Another assenger already in vehicle: ")
             return False
 
         passenger.vehicle = vehicle
         vehicle.passenger = passenger
         vehicle.passenger.loc = vehicle.loc
+        print("Passenger {} picked up ".format(passenger.id))
         self._update_map_after_pickup(vehicle, passenger)
         return True
 
@@ -360,10 +402,13 @@ class GridWorldEnv(gym.Env):
         Returns:
             bool: True if the dropoff was successful, False otherwise.
         """
+        print("Dropping off: ")
         # Check if the vehicle has a passenger
         if vehicle.passenger is None:
+            print("No passenger in vehicle: ")
             return False
         if not self._is_at_dropoff_location(vehicle):
+            print("Not at dropoff location: ")
             return False
 
         passenger = vehicle.passenger
@@ -385,6 +430,7 @@ class GridWorldEnv(gym.Env):
             bool: True if the refuel was successful, False otherwise.
         """
         if vehicle.fuel_level == vehicle.tank_capacity:
+            print("Already full: ")
             return False
         fuel_to_fill = vehicle.tank_capacity - vehicle.fuel_level
         vehicle.fuel_level += fuel_to_fill
@@ -403,6 +449,7 @@ class GridWorldEnv(gym.Env):
             bool: True if the vehicle was successfully moved, False otherwise.
         """
         if not self._is_in_bounds(new_loc):
+            print("Out of bounds: ")
             return False
         old_loc = vehicle.loc.copy()
         vehicle.loc = new_loc
@@ -424,27 +471,40 @@ class GridWorldEnv(gym.Env):
         # iterate over all actions for each vehicle
         for index, action in enumerate(actions):
             vehicle = self.vehicles[index]
+            # print what action the vehicle is taking
+            print(
+                "Vehicle {} taking the action: {}".format(
+                    index, Action_To_String[action]
+                )
+            )
 
             if action == ACTIONS.PICKUP:
                 # check if there is a passenger around for pickup
                 if self._step_action_pickup(vehicle):
                     reward += REWARDS.SUCCESS_PICKUP
+                    print("Picking up was succesful: ")
                 else:
                     reward += REWARDS.FAIL_PICKUP
 
             elif action == ACTIONS.DROPOFF:
                 if self._step_action_dropoff(vehicle):
+                    print("Dropping off was succesful: ")
                     reward += REWARDS.SUCCESS_DROPOFF
+                    print("All passengers are dropped off")
                     terminated = len(self.passengers) == 0
                 else:
+                    print("Dropping off was not succesful: ")
                     reward += REWARDS.FAIL_DROPOFF
 
             elif action == ACTIONS.REFUEL:
                 if not self._is_gas_station_around(vehicle.loc):
+                    print("No gas station around: ")
                     reward += REWARDS.FAIL_REFUEL
                 elif self._step_action_refuel(vehicle):
+                    print("Refueled ")
                     reward += REWARDS.SUCCESS_REFUEL
                 else:
+                    print("Refueling failed: ")
                     reward += REWARDS.FAIL_REFUEL
 
             else:
