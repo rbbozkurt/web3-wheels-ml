@@ -1,2 +1,2 @@
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: 2023 R. Berkay Bozkurt <resitberkaybozkurt@gmail.com>
+# SPDX-FileCopyrightText: 2024 R. Berkay Bozkurt <resitberkaybozkurt@gmail.com>
