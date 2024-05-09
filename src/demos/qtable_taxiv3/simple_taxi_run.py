@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: 2024 R. Berkay Bozkurt <resitberkaybozkurt@gmail.com>
+# SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
 
 # Virtual display
 from pyvirtualdisplay import Display

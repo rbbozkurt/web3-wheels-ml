@@ -26,6 +26,6 @@ pyvirtualdisplay = "==3.0"
 imageio-ffmpeg = "==0.4.9"
 pygame = "==2.5.2"
 pickle5 = "==0.0.11"
-
+osmnx = "==1.9.3"
 [requires]
 python_version = "3.10"
