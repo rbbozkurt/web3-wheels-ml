@@ -21,7 +21,7 @@ class Agent:
         self.location.longitude = carInfo.location.longitude
         self.location.latitude = carInfo.location.latitude
         self.passengers = []  # list of passengers in car
-
+        self.average_speed = 10  # km/h
         RideShareEnv.add_agent(self)  # Add agent to the environment
 
     def get_observation(self, env):
@@ -29,8 +29,21 @@ class Agent:
         Get the current observation for the agent based on the environment state.
         - Observation could include agent's position, nearby agents, traffic conditions, etc.
         """
+        # Get the agent's current position (node) in the environment
+        current_position = env.get_agent_position(self)
 
-        pass
+        # Get nearby agents within a certain radius
+        nearby_agents = env.get_nearby_agents(
+            self, radius=1.0
+        )  # Adjust the radius as needed
+
+        # Create the observation dictionary
+        observation = {
+            "position": current_position,
+            "nearby_agents": nearby_agents,
+        }
+
+        return observation
 
     def get_action(self, observation):
         """
@@ -43,19 +56,70 @@ class Agent:
 
     def action_move(self, agent, destination):
         """
-        Moves agent one step, equal to 0.1 km on graph?
-
+        Moves agent towards the destination based on the agent's speed and the time step.
         """
+        # Set the time step (in hours)
+        time_step = 0.1  # Each step represents 0.1 hours (6 minutes)
+
+        # Calculate the distance the agent can travel in one time step
+        distance_per_step = agent.average_speed * time_step
+
+        # Get the shortest path from the agent's current position to the destination
+        path = RideShareEnv.get_shortest_path(
+            agent.location, destination
+        )  # TODO Revisit agent
+
+        # Calculate the total distance of the path
+        total_distance = RideShareEnv.get_path_distance(path)
+
+        # Check if the agent can reach the destination within the current time step
+        if total_distance <= distance_per_step:
+            # Agent can reach the destination in this time step
+            agent.location = destination
+            RideShareEnv.update_agent_position(agent, destination)
+        else:
+            # Agent cannot reach the destination in this time step
+            # Move the agent along the path based on the distance per step
+            remaining_distance = distance_per_step
+            current_node = agent.location
+
+            for i in range(1, len(path)):
+                next_node = path[i]
+                edge_distance = RideShareEnv.get_edge_distance(current_node, next_node)
+
+                if remaining_distance >= edge_distance:
+                    # Agent can move to the next node
+                    current_node = next_node
+                    remaining_distance -= edge_distance
+                else:
+                    # Agent cannot reach the next node, stop at the current node
+                    break
+
+            # Update the agent's location and position in the environment
+            agent.location = current_node
+            RideShareEnv.update_agent_position(agent, current_node)
 
     def action_pickup(self, agent, passenger):
         """
         Checks if agent is in same node as passenger. If so, passenger is picked up and added to agent's list of passengers
         """
+        if agent.location == passenger.location:
+            # Add the passenger to the agent's list of passengers
+            agent.passengers.append(passenger)
+
+            # Remove the passenger from the environment
+            RideShareEnv.remove_passenger(passenger)
 
     def action_dropoff(self, agent, passenger):
         """
         Check if agent is in same node as passenger's destination. If so, passenger is dropped off and removed from agent's list of passengers
         """
+        if agent.location == passenger.destination:
+            # Remove the passenger from the agent's list of passengers
+            agent.passengers.remove(passenger)
+
+            # Mark the passenger as dropped off in the environment
+            RideShareEnv.mark_passenger_dropped_off(passenger)
 
     def update(self, action, reward, next_observation):
         """
