@@ -65,9 +65,7 @@ class Agent:
         distance_per_step = agent.average_speed * time_step
 
         # Get the shortest path from the agent's current position to the destination
-        path = RideShareEnv.get_shortest_path(
-            agent.location, destination
-        )  # TODO Revisit agent
+        path = RideShareEnv.get_shortest_path(agent.location, destination)
 
         # Calculate the total distance of the path
         total_distance = RideShareEnv.get_path_distance(path)
@@ -76,6 +74,7 @@ class Agent:
         if total_distance <= distance_per_step:
             # Agent can reach the destination in this time step
             agent.location = destination
+            agent.distance_from_node = 0  # Agent is at the destination node
             RideShareEnv.update_agent_position(agent, destination)
         else:
             # Agent cannot reach the destination in this time step
@@ -92,12 +91,15 @@ class Agent:
                     current_node = next_node
                     remaining_distance -= edge_distance
                 else:
-                    # Agent cannot reach the next node, stop at the current node
+                    # Agent cannot reach the next node, stop at the current position
+                    agent.location = current_node
+                    agent.distance_from_node = remaining_distance / edge_distance
                     break
 
-            # Update the agent's location and position in the environment
-            agent.location = current_node
-            RideShareEnv.update_agent_position(agent, current_node)
+            # Update the agent's position in the environment
+            RideShareEnv.update_agent_position(
+                agent, agent.location, agent.distance_from_node
+            )
 
     def action_pickup(self, agent, passenger):
         """
