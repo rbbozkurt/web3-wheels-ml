@@ -74,7 +74,7 @@ def draw_plain_map(G):
     """
     fig, ax = ox.plot_graph(G, node_size=0)
     plt.draw()
-    plt.pause(1)
+    plt.pause(0.5)
     return fig, ax
 
 
@@ -116,7 +116,7 @@ def draw_passengers_and_vehicles(
         s=node_sizes["passengers"]
     )
     plt.draw()
-    plt.pause(1)
+    plt.pause(0.5)
 
 
 def draw_route_on_map(
@@ -161,7 +161,7 @@ def draw_route_on_map(
         x.clear()
         y.clear()
         plt.draw()
-        plt.pause(1)
+        plt.pause(0.5)
 
 
 def show_map(fig):
