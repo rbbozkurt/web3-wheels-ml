@@ -27,19 +27,31 @@ class Agent:
             "longitude": carInfo["position"]["longitude"],
             "latitude": carInfo["position"]["latitude"],
         }
+        self.distance_from_node = 0  # distance to closest node when between nodes
         self.passengers = []  # list of passengers in car
-        self.average_speed = 10  # km/h
+        self.average_speed = 30  # km/h
+        self.destination = []  # Destination of Agent at any given time
+        self.path = []  # Path of Agent at any given time
+        self.env = env  # Environment in which the agent is operating
 
-    def get_observation(self, env):
+    def set_destination(self, destination):
+        """
+        Set the destination for the agent.
+        This can be used to set the passenger pickup destination, drop off destination,
+        or some other destination by a central planning agent.
+        """
+        self.destination.append(destination)
+
+    def get_observation(self):
         """
         Get the current observation for the agent based on the environment state.
         - Observation could include agent's position, nearby agents, traffic conditions, etc.
         """
         # Get the agent's current position (node) in the environment
-        current_position = env.get_agent_position(self)
+        current_position = self.env.get_agent_position(self)
 
         # Get nearby agents within a certain radius
-        nearby_agents = env.get_nearby_agents(
+        nearby_agents = self.env.get_nearby_agents(
             self, radius=1.0
         )  # Adjust the radius as needed
 
@@ -60,52 +72,56 @@ class Agent:
 
         pass
 
-    def action_move(self, agent, destination):
+    def action_move(self):
         """
         Moves agent towards the destination based on the agent's speed and the time step.
         """
         # Set the time step (in hours)
-        time_step = 0.1  # Each step represents 0.1 hours (6 minutes)
+        time_step = 0.5  # Each step represents x hours
 
         # Calculate the distance the agent can travel in one time step
-        distance_per_step = agent.average_speed * time_step
+        distance_per_step = self.average_speed * time_step
 
-        # Get the shortest path from the agent's current position to the destination
-        path = RideShareEnv.get_shortest_path(agent.position, destination)
+        if len(self.destination) > 0:
+            destination = self.destination[0]  # Get the first destination in the list
 
-        # Calculate the total distance of the path
-        total_distance = RideShareEnv.get_path_distance(path)
+            # Get the shortest path from the agent's current position to the destination
+            path = self.env.get_route(self.position, destination)
+            self.path = path
+            # Calculate the total distance of the path
+            total_distance = self.env.get_path_distance(path)
 
-        # Check if the agent can reach the destination within the current time step
-        if total_distance <= distance_per_step:
-            # Agent can reach the destination in this time step
-            agent.position = destination
-            agent.distance_from_node = 0  # Agent is at the destination node
-            RideShareEnv.update_agent_position(agent, destination)
-        else:
-            # Agent cannot reach the destination in this time step
-            # Move the agent along the path based on the distance per step
-            remaining_distance = distance_per_step
-            current_node = agent.position
+            # Check if the agent can reach the destination within the current time step
+            if total_distance <= distance_per_step:
+                # Agent can reach the destination in this time step
+                self.position = destination
+                self.distance_from_node = 0  # Agent is at the destination node
+                self.update_agent_position(destination)
+                self.destination.pop(0)  # Remove the reached destination from the list
+            else:
+                # Agent cannot reach the destination in this time step
+                # Move the agent along the path, to next node, based on the distance per step
+                current_node = self.position  # same as path[0]
+                next_node = path[1]
+                edge_data = self.env.map_network.get_edge_data(current_node, next_node)
+                edge_distance = edge_data[0]["length"]
+                remaining_distance = edge_distance - self.distance_from_node
 
-            for i in range(1, len(path)):
-                next_node = path[i]
-                edge_distance = RideShareEnv.get_edge_distance(current_node, next_node)
-
-                if remaining_distance >= edge_distance:
+                if distance_per_step >= remaining_distance:
                     # Agent can move to the next node
-                    current_node = next_node
-                    remaining_distance -= edge_distance
+                    self.update_agent_position(next_node)
                 else:
                     # Agent cannot reach the next node, stop at the current position
-                    agent.position = current_node
-                    agent.distance_from_node = remaining_distance / edge_distance
-                    break
+                    self.distance_from_node += distance_per_step
+                    self.update_agent_position(current_node, self.distance_from_node)
 
-            # Update the agent's position in the environment
-            RideShareEnv.update_agent_position(
-                agent, agent.position, agent.distance_from_node
-            )
+        else:
+            # If no destination is set, the agent stays still
+            pass
+
+    def update_agent_position(self, position, distance_from_node=0):
+        self.position = position
+        self.distance_from_node = distance_from_node
 
     def action_pickup(self, agent, passenger):
         """

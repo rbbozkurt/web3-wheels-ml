@@ -70,18 +70,37 @@ class RideShareEnv(Env):
         """
         return nx.shortest_path(self.map_network, start_node, end_node)
 
-    def render(self, mode="human", output_file="test_environment.png"):
+    def get_path_distance(self, path):
+        """
+        Gets the total distance of path
+        """
+        edge_lengths = ox.routing.route_to_gdf(self.map_network, path)["length"]
+        total_distance = round(sum(edge_lengths))
+        return total_distance
+
+    def render(
+        self, mode="human", ax=None, route=None, output_file="test_environment.png"
+    ):
         """
         Render the current state of the environment.
-        - Visualize the agents, ride requests, and street network graph
+        - Visualize the agents, ride requests, street network graph, and route (if provided)
         """
-        fig, ax = ox.plot_graph(
+        if ax is None:
+            fig, ax = plt.subplots()
+
+        # Plot the street network graph
+        ox.plot_graph(
             self.map_network,
             node_size=0,
             bgcolor="white",
             edge_linewidth=0.5,
             edge_color="gray",
+            ax=ax,
         )
+
+        # Plot the route (if provided)
+        if route is not None:
+            ox.plot_graph_route(self.map_network, route, node_size=0, ax=ax)
 
         # Plot agents on the map
         for agent in self.agents:
@@ -97,8 +116,7 @@ class RideShareEnv(Env):
 
         ax.legend()
 
-        # Save the plot to the specified output file
-        fig.savefig(output_file)
-
-        # Close the figure to free up memory
-        plt.close(fig)
+        if output_file is not None:
+            # Save the plot to the specified output file
+            plt.savefig(output_file)
+            plt.close(fig)
