@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import osmnx as ox
 
-PLOT_PAUSE = 1.0
+PLOT_PAUSE = 1
 
 
 def G_map_from_address(address: str = "350 5th Ave, New York, New York"):
@@ -78,6 +78,39 @@ def draw_plain_map(G, pre_ax=None):
     return fig, ax
 
 
+def draw_outgoing_roads_to_neighbors(
+    G, node_id, road_color="green", road_linewidth=3, road_alpha=0.9, pre_ax=None
+):
+    """
+    Draws outgoing roads to neighbors of a node.
+
+    Parameters:
+    - G: networkx.MultiDiGraph
+        Input graph
+    - node_id: int
+        ID of the node
+
+    Returns:
+    - fig, ax: tuple
+        Matplotlib figure and axis objects
+    """
+    neighbor_node_ids = list(G[node_id].keys())
+    for neighbor_node_id in neighbor_node_ids:
+        edge_data = G.get_edge_data(node_id, neighbor_node_id).values()
+        x, y = [], []
+        for data in edge_data:
+            if "geometry" in data:
+                xs, ys = data["geometry"].xy
+                x.extend(xs)
+                y.extend(ys)
+            else:
+                x.extend((G.nodes[node_id]["x"], G.nodes[neighbor_node_id]["x"]))
+                y.extend((G.nodes[node_id]["y"], G.nodes[neighbor_node_id]["y"]))
+            pre_ax.plot(x, y, c=road_color, lw=road_linewidth, alpha=road_alpha)
+    plt.draw()
+    plt.pause(PLOT_PAUSE)
+
+
 def draw_passengers_and_vehicles(
     G,
     vehicles_node_ids,
@@ -120,7 +153,7 @@ def draw_passengers_and_vehicles(
 
 
 def draw_route_on_map(
-    G, routes, pre_ax, route_color="blue", route_linewidth=2, route_alpha=0.2
+    G, routes, pre_ax, route_color="red", route_linewidth=2, route_alpha=0.6
 ):
     """
     Draws a route on the map.
