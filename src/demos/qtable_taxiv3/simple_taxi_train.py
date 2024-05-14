@@ -1,21 +1,17 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 R. Berkay Bozkurt <resitberkaybozkurt@gmail.com>
 
+import random
+
+import gymnasium as gym
+import numpy as np
+import pickle5 as pickle
+
 # Virtual display
 from pyvirtualdisplay import Display
 
 virtual_display = Display(visible=0, size=(1400, 900))
 virtual_display.start()
-
-import os
-import random
-
-import gymnasium as gym
-import imageio
-import numpy as np
-import pickle5 as pickle
-
-from .envs import GridWorldEnv
 
 
 def initialize_q_table(state_space, action_space):
@@ -82,10 +78,8 @@ def train(
     return Qtable
 
 
-# env = gym.make("Taxi-v3", render_mode="rgb_array")
-env = GridWorldEnv(
-    map_string=grid_world_5_x_5, n_vehicle=1, n_passenger=1, n_gas_station=1
-)
+env = gym.make("Taxi-v3", render_mode="rgb_array")
+
 
 state_space = env.observation_space.n
 action_space = env.action_space.n
