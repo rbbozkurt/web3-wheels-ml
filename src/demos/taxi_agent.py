@@ -4,7 +4,7 @@
 from ..demos.envs.maps.osm_env import RideShareEnv
 
 
-class Agent:
+class TaxiAgent:
     def __init__(self, env, carInfo):
         """
         Initialize an agent with its properties (car type, tankCapacity level, etc.).
@@ -125,7 +125,9 @@ class Agent:
 
     def action_pickup(self, agent, passenger):
         """
-        Checks if agent is in same node as passenger. If so, passenger is picked up and added to agent's list of passengers
+        Checks if agent is in same node as passenger.
+        If so, passenger is picked up and added to
+        agent's list of passengers
         """
         if agent.position == passenger.position:
             # Add the passenger to the agent's list of passengers
@@ -136,7 +138,9 @@ class Agent:
 
     def action_dropoff(self, agent, passenger):
         """
-        Check if agent is in same node as passenger's destination. If so, passenger is dropped off and removed from agent's list of passengers
+        Check if agent is in same node as passenger's destination.
+        If so, passenger is dropped off and removed from
+        agent's list of passengers
         """
         if agent.position == passenger.destination:
             # Remove the passenger from the agent's list of passengers

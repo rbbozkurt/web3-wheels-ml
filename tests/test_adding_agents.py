@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import osmnx as ox
 
 from src.demos.envs.maps.osm_env import RideShareEnv
-from src.demos.taxi_agent import Agent
+from src.demos.taxi_agent import TaxiAgent
 
 
 def test_adding_agents():
@@ -36,8 +36,8 @@ def test_adding_agents():
     }
 
     # Create agent instances using the car information
-    agent_1 = Agent(env, car_info_1)
-    agent_2 = Agent(env, car_info_2)
+    agent_1 = TaxiAgent(env, car_info_1)
+    agent_2 = TaxiAgent(env, car_info_2)
 
     # Add the agents to the environment
     env.add_agent(agent_1)
@@ -68,7 +68,7 @@ def test_agent_movement():
     }
 
     # Create agent instances using the car information
-    agent_1 = Agent(env, car_info_1)
+    agent_1 = TaxiAgent(env, car_info_1)
 
     # Add the agents to the environment
     env.add_agent(agent_1)
