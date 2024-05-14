@@ -123,5 +123,7 @@ def test_graph_navigation_env():
 
 
 if __name__ == "__main__":
-    test_graph_navigation_env()
+    # test_graph_navigation_env()
     # simulate_map_passenger_vehicle()
+    print(nx.node_link_data(graph_world_350_5th_Ave_New_York_New_York))
+    print(type(nx.node_link_data(graph_world_350_5th_Ave_New_York_New_York)))
