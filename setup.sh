@@ -35,7 +35,7 @@ check_pip() {
         echo "pip3 is not installed. Installing pip..."
         python3 -m ensurepip --default-pip
     fi
-    echo "pip check completed."
+    echo "pip3 check completed."
 
 }
 
@@ -58,6 +58,11 @@ install_dependencies() {
     pipenv install --dev
 }
 
+activate_pipenv() {
+    echo "Activating Pipenv shell..."
+    pipenv shell
+}
+
 # Setup pre-commit hooks from .pre-commit-config.yaml if it exists
 setup_pre_commit_hooks() {
     if [ -f .pre-commit-config.yaml ]; then
@@ -76,5 +81,6 @@ main_setup() {
     install_dependencies
     setup_pre_commit_hooks
     echo "Setup completed successfully."
+    activate_pipenv
 }
 main_setup
