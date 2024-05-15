@@ -8,7 +8,7 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from .utils import *
+from utils import *
 
 FPS = 4
 
