@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 R. Berkay Bozkurt <resitberkaybozkurt@gmail.com>
 
+import sys
 from typing import Any, Dict
 
 import networkx as nx
@@ -68,4 +69,9 @@ async def predict(graph_data: Dict[str, Any]):
 
 # Run the app with Uvicorn on a custom port
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    if len(sys.argv) != 3 or sys.argv[1] != "--port":
+        print("Usage: python endpoint.py --port <port_number>")
+        sys.exit(1)
+
+    port = int(sys.argv[2])
+    uvicorn.run(app, host="0.0.0.0", port=port)
