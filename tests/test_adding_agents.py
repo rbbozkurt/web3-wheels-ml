@@ -18,20 +18,19 @@ def test_adding_agents():
     car_info_1 = {
         "name": "Car 1",
         "vin": "ABC123",
-        "year": 2022,
-        "mileage": 10000,
-        "fuel": 50,
-        "model": "Sedan",
+        "description": "Sedan",
+        "mileage_km": 10000,
+        "tankCapacity": 50,
         "position": {"latitude": 37.824454, "longitude": -122.231589},
     }
 
     car_info_2 = {
         "name": "Car 2",
         "vin": "XYZ789",
-        "year": 2021,
-        "mileage": 15000,
+        "description": "Sedan",
+        "mileage_km": 15000,
         "fuel": 60,
-        "model": "SUV",
+        "tankCapacity": "SUV",
         "position": {"latitude": 37.821592, "longitude": -122.234797},
     }
 
@@ -60,10 +59,9 @@ def test_agent_movement():
     car_info_1 = {
         "name": "Car 1",
         "vin": "ABC123",
-        "year": 2022,
-        "mileage": 10000,
-        "fuel": 50,
-        "model": "Sedan",
+        "description": "Sedan",
+        "mileage_km": 10000,
+        "tankCapacity": 50,
         "position": {"latitude": 37.824454, "longitude": -122.231589},
     }
 

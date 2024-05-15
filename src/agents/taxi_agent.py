@@ -12,24 +12,24 @@ class TaxiAgent:
         - Backend will initialize each agent with Info from User (or fetched from an API using VIN)
         """
         self.name = carInfo["name"]
+        self.description = carInfo["description"]
         self.vin = carInfo["vin"]
-        self.year = carInfo["year"]
-        self.literPerMove = carInfo.get(
-            "literPerMove", 0.1
-        )  # Default to 0.1 if not provided
-        self.tankCapacity = carInfo.get(
-            "tankCapacity", 50
-        )  # Default to 50 if not provided
-        self.currentFuel = carInfo["fuel"]
-        self.reputation = 90  # from 1-100. Start at 90
-        self.model = carInfo["model"]
         self.position = {
             "longitude": carInfo["position"]["longitude"],
             "latitude": carInfo["position"]["latitude"],
         }
+        self.mileage_km = carInfo.get(
+            "mileage_km", 0.1
+        )  # Default to 0.1 if not provided
+        self.tankCapacity = carInfo.get(
+            "tankCapacity", 50
+        )  # Default to 50 if not provided
+        self.currentFuel = self.tankCapacity
+        self.reputation = carInfo.get("reputation", 90)  # from 1-100. Start at 90
+
         self.distance_from_node = 0  # distance to closest node when between nodes
         self.passengers = []  # list of passengers in car
-        self.average_speed = 30  # km/h
+
         self.destination = []  # Destination of Agent at any given time
         self.path = []  # Path of Agent at any given time
         self.env = env  # Environment in which the agent is operating
@@ -80,7 +80,8 @@ class TaxiAgent:
         time_step = 0.5  # Each step represents x hours
 
         # Calculate the distance the agent can travel in one time step
-        distance_per_step = self.average_speed * time_step
+        average_speed = 30  # km/h #TODO use speed limit of road as speed
+        distance_per_step = average_speed * time_step
 
         if len(self.destination) > 0:
             destination = self.destination[0]  # Get the first destination in the list
