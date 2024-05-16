@@ -72,16 +72,15 @@ class TaxiAgent:
 
         pass
 
-    def action_move(self):
+    def action_move(self, timestep=0.5):
         """
         Moves agent towards the destination based on the agent's speed and the time step.
+
         """
-        # Set the time step (in hours)
-        time_step = 0.5  # Each step represents x hours
 
         # Calculate the distance the agent can travel in one time step
         average_speed = 30  # km/h #TODO use speed limit of road as speed
-        distance_per_step = average_speed * time_step
+        distance_per_step = average_speed * timestep
 
         if len(self.destination) > 0:
             destination = self.destination[0]  # Get the first destination in the list
@@ -124,31 +123,28 @@ class TaxiAgent:
         self.position = position
         self.distance_from_node = distance_from_node
 
-    def action_pickup(self, agent, passenger):
+    def action_pickup(self, passenger):
         """
         Checks if agent is in same node as passenger.
         If so, passenger is picked up and added to
         agent's list of passengers
         """
-        if agent.position == passenger.position:
+        if self.position == passenger.position:
             # Add the passenger to the agent's list of passengers
-            agent.passengers.append(passenger)
+            self.passengers.append(passenger)
 
-            # Remove the passenger from the environment
-            RideShareEnv.remove_passenger(passenger)
-
-    def action_dropoff(self, agent, passenger):
+    def action_dropoff(self, passenger):
         """
         Check if agent is in same node as passenger's destination.
         If so, passenger is dropped off and removed from
         agent's list of passengers
         """
-        if agent.position == passenger.destination:
+        if self.position == passenger.destination:
             # Remove the passenger from the agent's list of passengers
-            agent.passengers.remove(passenger)
+            self.passengers.remove(passenger)
 
             # Mark the passenger as dropped off in the environment
-            RideShareEnv.mark_passenger_dropped_off(passenger)
+            RideShareEnv.remove_passenger(passenger)
 
     def update(self, action, reward, next_observation):
         """

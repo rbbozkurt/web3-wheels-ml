@@ -7,6 +7,8 @@ import networkx as nx
 import osmnx as ox
 from gymnasium import Env, spaces, utils
 
+from agents import Passenger, TaxiAgent
+
 
 class RideShareEnv(Env):
     def __init__(self, map_area="Piedmont, California, USA"):
@@ -17,10 +19,10 @@ class RideShareEnv(Env):
         - Define the observation and action spaces
         """
         self.map_network = ox.graph_from_place(map_area, network_type="drive")
-        self.agents = []
+        self.taxi_agents = []
         self.passengers = []
 
-    def add_agent(self, agent):
+    def add_agent(self, agent: TaxiAgent):
         """
         Gets called when Owner adds car from frontend
         - Add a new agent to the environment.
@@ -30,9 +32,12 @@ class RideShareEnv(Env):
             self.map_network, agent.position["longitude"], agent.position["latitude"]
         )
         agent.position = closest_node
-        self.agents.append(agent)
+        self.taxi_agents.append(agent)
 
-    def add_passenger(self, passenger):
+    def remove_taxi_agent(self, agent: TaxiAgent):
+        self.taxi_agents.remove(agent)
+
+    def add_passenger(self, passenger: Passenger):
         """
         Gets called when Owner adds passenger from frontend
         - Add a new passenger to the environment.
@@ -44,23 +49,62 @@ class RideShareEnv(Env):
         passenger.position = closest_node
         self.passengers.append(passenger)
 
+    def remove_passenger(self, passenger: Passenger):
+        """
+        Passenger is removed from environment when dropped off
+        """
+
+        self.passengers.remove(passenger)
+
     def reset(self):
         """
-        Reset the environment to its initial state. (Do I reset if it is continuous learning?)
+        Reset the environment to its initial state.
         - Reset agent positions, fuel levels, etc.
         - Generate a new ride request (pickup and drop-off nodes)
         - Return the initial observation
         """
         pass
 
-    def step(self, actions):
+    def step(self, timestep):
         """
-        Perform one step in the environment based on the agents' actions.
+        Perform one time step in the environment
         - Update agent positions based on their actions
         - Check for ride completion, collisions, or other events
         - Calculate and return rewards, next observations, done flags, and info
         """
-        pass
+        for agent in self.agents:
+            agent.action_move(timestep)
+
+        # Check for passenger pickup and drop-off events
+        for agent in self.agents:
+            for passenger in self.passengers:
+                if (
+                    agent.position == passenger.position
+                    and not passenger.is_picked_up()
+                ):
+                    # Passenger pickup event
+                    agent.action_pickup(passenger)
+                    passenger.set_picked_up(True)
+                elif (
+                    agent.position == passenger.destination and passenger.is_picked_up()
+                ):
+                    # Passenger drop-off event
+                    agent.action_dropoff(passenger)
+                    passenger.set_completed(True)
+
+        # Calculate rewards based on passenger waiting time and ride completion
+        rewards = self._calculate_rewards()
+
+        # Get the next observation
+        next_observation = self._get_observation()
+
+        # Check if the episode is done
+        done = self._is_done()
+
+        # Provide additional information if needed
+        info = {}
+
+        return next_observation, rewards, done, info
 
     def get_route(self, start_node, end_node):
         """
@@ -83,7 +127,7 @@ class RideShareEnv(Env):
     ):
         """
         Render the current state of the environment.
-        - Visualize the agents, ride requests, street network graph, and route (if provided)
+        - Visualize the taxi_agents, ride requests, street network graph, and route (if provided)
         """
         if ax is None:
             fig, ax = plt.subplots()
@@ -102,8 +146,8 @@ class RideShareEnv(Env):
         if route is not None:
             ox.plot_graph_route(self.map_network, route, node_size=0, ax=ax)
 
-        # Plot agents on the map
-        for agent in self.agents:
+        # Plot taxi_agents on the map
+        for agent in self.taxi_agents:
             node = self.map_network.nodes[agent.position]
             x, y = node["x"], node["y"]
             ax.scatter(x, y, color="blue", marker="o", s=50, label="Agent")
