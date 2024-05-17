@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
 
-from envs import RideShareEnv
-
 
 class TaxiAgent:
     def __init__(self, env, carInfo):
@@ -144,14 +142,4 @@ class TaxiAgent:
             self.passengers.remove(passenger)
 
             # Mark the passenger as dropped off in the environment
-            RideShareEnv.remove_passenger(passenger)
-
-    def update(self, action, reward, next_observation):
-        """
-        Update the agent's state and policy based on the action taken, reward received, and next observation.
-        - This function will be called by the RL algorithm during training
-        """
-        RideShareEnv.step(
-            self, action, reward, next_observation
-        )  # Update the environment
-        pass
+            self.env.remove_passenger(passenger)

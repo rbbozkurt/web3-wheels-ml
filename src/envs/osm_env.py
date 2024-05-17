@@ -1,11 +1,10 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
 
-import gymnasium as gym
 import matplotlib.pyplot as plt
 import networkx as nx
 import osmnx as ox
-from gymnasium import Env, spaces, utils
+from gymnasium import Env
 
 from agents import Passenger, TaxiAgent
 
@@ -43,8 +42,11 @@ class RideShareEnv(Env):
         - Add a new passenger to the environment.
         - Uses passenger's position to assign closest node on graph
         """
+        # TODO: Check that passenger destination is not equal to pickup location
         closest_node = ox.distance.nearest_nodes(
-            self.map_network, passenger.position.longitude, passenger.position.latitude
+            self.map_network,
+            passenger.pickup_location["longitude"],
+            passenger.pickup_location["latitude"],
         )
         passenger.position = closest_node
         self.passengers.append(passenger)

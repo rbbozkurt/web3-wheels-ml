@@ -5,11 +5,11 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import osmnx as ox
 
-from agents import TaxiAgent
+from agents import Passenger, TaxiAgent
 from envs import RideShareEnv
 
 
-def test_adding_agents():
+def test_adding_taxi_agents():
     # Create a ride-sharing environment
     map_area = "Piedmont, California, USA"
     env = RideShareEnv(map_area)
@@ -120,3 +120,18 @@ def test_agent_movement():
     assert state[
         "reached_destination"
     ], "Agent did not reach the destination within the maximum number of steps"
+
+
+def test_adding_passengers():
+    map_area = "Piedmont, California, USA"
+    env = RideShareEnv(map_area)
+
+    passenger = Passenger(
+        passenger_id=1,
+        pickup_location={"latitude": 37.824454, "longitude": -122.231589},
+        dropoff_location={"latitude": 37.821592, "longitude": -122.234797},
+    )
+    env.add_passenger(passenger)
+
+    assert passenger in env.passengers
+    env.render()

@@ -4,10 +4,22 @@ import time
 
 
 class Passenger:
-    def __init__(self, passenger_id, pickup_location, dropoff_location, request_time):
+    def __init__(
+        self,
+        passenger_id,
+        pickup_location,
+        dropoff_location,
+        request_time=time.time(),
+    ):
         self.passenger_id = passenger_id
-        self.pickup_location = pickup_location
-        self.dropoff_location = dropoff_location
+        self.pickup_location = {
+            "longitude": pickup_location["longitude"],
+            "latitude": pickup_location["latitude"],
+        }
+        self.dropoff_location = {
+            "longitude": dropoff_location["longitude"],
+            "latitude": dropoff_location["latitude"],
+        }
         self.position = pickup_location
         self.ride_request_time = request_time
         self.waiting_time = 0
