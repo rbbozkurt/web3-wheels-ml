@@ -3,10 +3,11 @@
 
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
 import osmnx as ox
-from gymnasium import Env
+from gymnasium import Env, spaces
 
-from agents import Passenger, TaxiAgent
+from agents import Passenger, TaxiAgent, reward_function_basic
 
 
 class RideShareEnv(Env):
@@ -20,6 +21,8 @@ class RideShareEnv(Env):
         self.map_network = ox.graph_from_place(map_area, network_type="drive")
         self.taxi_agents = []
         self.passengers = []
+        self.observation_space = self._get_observation_space()
+        self.action_space = self._get_action_space()
 
     def add_agent(self, agent: TaxiAgent):
         """
@@ -32,6 +35,67 @@ class RideShareEnv(Env):
         )
         agent.position = closest_node
         self.taxi_agents.append(agent)
+
+    def _get_observation_space(self):
+        # Define the observation space based on your problem
+        # Include the positions of agents and passengers, and the destinations of passengers
+
+        num_agents = len(self.taxi_agents)
+        num_passengers = len(self.passengers)
+
+        observation_space = spaces.Dict(
+            {
+                "num_agents": spaces.Discrete(num_agents + 1),
+                "num_passengers": spaces.Discrete(num_passengers + 1),
+                "agent_positions": spaces.Box(
+                    low=np.array([[-180, -90]] * num_agents),
+                    high=np.array([[180, 90]] * num_agents),
+                    dtype=np.float32,
+                ),
+                "passenger_positions": spaces.Box(
+                    low=np.array([[-180, -90]] * num_passengers),
+                    high=np.array([[180, 90]] * num_passengers),
+                    dtype=np.float32,
+                ),
+                "passenger_destinations": spaces.Box(
+                    low=np.array([[-180, -90]] * num_passengers),
+                    high=np.array([[180, 90]] * num_passengers),
+                    dtype=np.float32,
+                ),
+                # Add other relevant observations
+            }
+        )
+        return observation_space
+
+    def _get_action_space(self):
+        # Define the action space based on your problem
+        # Example: Selecting a destination node for each agent
+        max_nodes = 1000  # Adjust this value based on your requirements
+        action_space = spaces.Discrete(max_nodes)
+        return action_space
+
+    def _get_observation(self):
+        observation = {
+            "num_agents": len(self.taxi_agents),
+            "num_passengers": len(self.passengers),
+            "agent_positions": np.array(
+                [list(agent.position.values()) for agent in self.taxi_agents]
+            ),
+            "passenger_positions": np.array(
+                [
+                    list(passenger.pickup_location.values())
+                    for passenger in self.passengers
+                ]
+            ),
+            "passenger_destinations": np.array(
+                [
+                    list(passenger.dropoff_location.values())
+                    for passenger in self.passengers
+                ]
+            ),
+            # Add other relevant observations
+        }
+        return observation
 
     def remove_taxi_agent(self, agent: TaxiAgent):
         self.taxi_agents.remove(agent)
@@ -62,10 +126,16 @@ class RideShareEnv(Env):
         """
         Reset the environment to its initial state.
         - Reset agent positions, fuel levels, etc.
-        - Generate a new ride request (pickup and drop-off nodes)
+        - Generate new passengers with pickup and dropoff locations
         - Return the initial observation
         """
-        pass
+        # Reset taxi agents
+        self.taxi_agents = []
+        # Reset passengers
+        self.passengers = []
+        # Create the initial observation
+        observation = self._get_observation()
+        return observation
 
     def step(self, timestep):
         """
@@ -95,7 +165,7 @@ class RideShareEnv(Env):
                     passenger.set_completed(True)
 
         # Calculate rewards based on passenger waiting time and ride completion
-        rewards = self._calculate_rewards()
+        rewards = reward_function_basic(self)
 
         # Get the next observation
         next_observation = self._get_observation()

@@ -4,6 +4,7 @@
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import osmnx as ox
+from gymnasium import spaces
 
 from agents import Passenger, TaxiAgent
 from envs import RideShareEnv
@@ -43,9 +44,9 @@ def test_adding_taxi_agents():
     env.add_agent(agent_2)
 
     # Assert that the agents are added to the environment correctly
-    assert len(env.agents) == 2
-    assert agent_1 in env.agents
-    assert agent_2 in env.agents
+    assert len(env.taxi_agents) == 2
+    assert agent_1 in env.taxi_agents
+    assert agent_2 in env.taxi_agents
 
     env.render()
 
@@ -68,7 +69,7 @@ def test_agent_movement():
     # Create agent instances using the car information
     agent_1 = TaxiAgent(env, car_info_1)
 
-    # Add the agents to the environment
+    # Add the taxi_agents to the environment
     env.add_agent(agent_1)
 
     # Set a destination for the agent
@@ -135,3 +136,75 @@ def test_adding_passengers():
 
     assert passenger in env.passengers
     env.render()
+
+
+def test_observation_space():
+    # Create a sample ride-sharing environment
+    map_area = "Piedmont, California, USA"
+    env = RideShareEnv(map_area)
+
+    # Create some sample taxi agents
+    car_info_1 = {
+        "name": "Car 1",
+        "vin": "ABC123",
+        "description": "Sedan",
+        "mileage_km": 10000,
+        "tankCapacity": 50,
+        "position": {"latitude": 37.824454, "longitude": -122.231589},
+    }
+    car_info_2 = {
+        "name": "Car 2",
+        "vin": "XYZ789",
+        "description": "SUV",
+        "mileage_km": 5000,
+        "tankCapacity": 60,
+        "position": {"latitude": 37.821592, "longitude": -122.234797},
+    }
+    agent_1 = TaxiAgent(env, car_info_1)
+    agent_2 = TaxiAgent(env, car_info_2)
+    env.add_agent(agent_1)
+    env.add_agent(agent_2)
+
+    # Create some sample passengers
+    passenger_1 = Passenger(
+        passenger_id=1,
+        pickup_location={"latitude": 37.825000, "longitude": -122.232000},
+        dropoff_location={"latitude": 37.820000, "longitude": -122.235000},
+    )
+    passenger_2 = Passenger(
+        passenger_id=2,
+        pickup_location={"latitude": 37.823000, "longitude": -122.233000},
+        dropoff_location={"latitude": 37.819000, "longitude": -122.236000},
+    )
+    env.add_passenger(passenger_1)
+    env.add_passenger(passenger_2)
+
+    # Get the observation space
+    observation_space = env._get_observation_space()
+
+    # Check the correctness of the observation space
+    assert isinstance(observation_space, spaces.Dict)
+    assert "num_agents" in observation_space.spaces
+    assert "num_passengers" in observation_space.spaces
+    assert "agent_positions" in observation_space.spaces
+    assert "passenger_positions" in observation_space.spaces
+    assert "passenger_destinations" in observation_space.spaces
+
+    # Check the correctness of the observation space dimensions
+    assert observation_space["num_agents"].n == 3  # 2 agents + 1
+    assert observation_space["num_passengers"].n == 3  # 2 passengers + 1
+    assert observation_space["agent_positions"].shape == (2, 2)
+    assert observation_space["passenger_positions"].shape == (2, 2)
+    assert observation_space["passenger_destinations"].shape == (2, 2)
+
+    # Reset the environment and check the initial observation
+    observation = env.reset()
+    assert observation["num_agents"] == 0
+    assert observation["num_passengers"] == 0
+
+
+def test_action_space():
+    map_area = "Piedmont, California, USA"
+    env = RideShareEnv(map_area)
+
+    assert isinstance(env.action_space, spaces.Discrete)
