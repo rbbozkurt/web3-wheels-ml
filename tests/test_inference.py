@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
 import numpy as np
-import osmnx as ox
 
 from agents import AICoordinator, Passenger, TaxiAgent
 from envs import RideShareEnv

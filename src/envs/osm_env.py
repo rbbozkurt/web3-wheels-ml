@@ -26,6 +26,7 @@ class RideShareEnv(Env):
         self.action_to_node_mapping = self._create_action_to_node_mapping()
         self.current_time_step = 0
         self.max_time_steps = max_time_steps
+        self.map_bounds = self.get_map_bounds()
 
     def add_agent(self, agent: TaxiAgent):
         """
@@ -81,6 +82,14 @@ class RideShareEnv(Env):
             }
         )
         return observation_space
+
+    def get_map_bounds(self):
+        # Get the bounding box of the map network
+        bounds = ox.utils_geo.bbox_from_network(
+            self.map_network
+        )  # TODO: Double check utils
+        min_lat, min_lng, max_lat, max_lng = bounds
+        return min_lat, min_lng, max_lat, max_lng
 
     def _get_action_space(self):
         # Define the action space based on your problem

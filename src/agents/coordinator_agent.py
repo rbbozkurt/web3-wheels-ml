@@ -2,10 +2,10 @@
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
 import tensorflow as tf
 from tensorflow.python.keras.layers import Dense
-from tf_agents.agents import DdpgAgent, TFAgent
+from tf_agents.agents import DdpgAgent
 from tf_agents.networks import Sequential
 from tf_agents.specs import TensorSpec
-from tf_agents.trajectories import Trajectory
+from tf_agents.trajectories import trajectory
 
 
 class AICoordinator:
@@ -64,9 +64,25 @@ class AICoordinator:
             [Dense(128, activation="relu"), Dense(64, activation="relu"), Dense(1)]
         )
 
-    def train(self, experience):
-        # Train the agent with the collected experience
-        self.agent.train(experience)
+    def train(self, experiences):
+        # Convert experiences to trajectories
+        trajectories = [
+            trajectory.from_transition(
+                observation=tf.constant(exp[0], dtype=tf.float32),
+                action=tf.constant(exp[1], dtype=tf.float32),
+                reward=tf.constant(exp[2], dtype=tf.float32),
+                discount=tf.constant(1.0 - float(exp[4]), dtype=tf.float32),
+                next_step_type=tf.constant(0 if exp[4] else 1, dtype=tf.int32),
+                observation_step=tf.constant(exp[3], dtype=tf.float32),
+            )
+            for exp in experiences
+        ]
+
+        # Create a dataset from the trajectories
+        dataset = trajectory.experience_to_transitions(trajectories)
+
+        # Train the agent with the dataset
+        self.agent.train(dataset)
 
     def get_action(self, observation):
         # Get the action from the agent based on the observation
