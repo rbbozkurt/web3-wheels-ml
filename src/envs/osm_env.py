@@ -11,7 +11,7 @@ from agents import Passenger, TaxiAgent, reward_function_basic
 
 
 class RideShareEnv(Env):
-    def __init__(self, map_area="Piedmont, California, USA"):
+    def __init__(self, map_area="Piedmont, California, USA", max_time_steps=99):
         """
         Initialize the ride-sharing environment.
         - Download the street network data using OSMnx
@@ -24,6 +24,8 @@ class RideShareEnv(Env):
         self.observation_space = self._get_observation_space()
         self.action_space = self._get_action_space()
         self.action_to_node_mapping = self._create_action_to_node_mapping()
+        self.current_time_step = 0
+        self.max_time_steps = max_time_steps
 
     def add_agent(self, agent: TaxiAgent):
         """
@@ -36,6 +38,18 @@ class RideShareEnv(Env):
         )
         agent.position = closest_node
         self.taxi_agents.append(agent)
+
+    def _is_done(self):
+        # Check if all passengers have reached their destinations
+        for passenger in self.passengers:
+            if not passenger.completed:
+                return False
+
+        # Check if the maximum time step limit has been reached
+        if self.current_time_step >= self.max_time_steps:
+            return True
+
+        return False
 
     def _get_observation_space(self):
         # Define the observation space based on your problem
@@ -184,7 +198,7 @@ class RideShareEnv(Env):
             self.taxi_agents[taxi_id].set_destination(destination_node_id)
 
         # Calculate rewards based on passenger waiting time and ride completion
-        rewards = self.reward_function_basic()
+        rewards = reward_function_basic(self)
 
         # Check if the episode is done
         done = self._is_done()
