@@ -8,7 +8,7 @@ class Passenger:
         self,
         passenger_id,
         pickup_location,
-        dropoff_location,
+        destination,
         request_time=time.time(),
     ):
         self.passenger_id = passenger_id
@@ -16,9 +16,9 @@ class Passenger:
             "longitude": pickup_location["longitude"],
             "latitude": pickup_location["latitude"],
         }
-        self.dropoff_location = {
-            "longitude": dropoff_location["longitude"],
-            "latitude": dropoff_location["latitude"],
+        self.destination = {
+            "longitude": destination["longitude"],
+            "latitude": destination["latitude"],
         }
         self.position = pickup_location
         self.ride_request_time = request_time
@@ -47,4 +47,4 @@ class Passenger:
         return self.waiting_time
 
     def __str__(self):
-        return f"Passenger {self.passenger_id}: Pickup: {self.pickup_location}, Dropoff: {self.dropoff_location}"
+        return f"Passenger {self.passenger_id}: Pickup: {self.pickup_location}, Dropoff: {self.destination}"

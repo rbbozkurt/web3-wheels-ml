@@ -130,6 +130,7 @@ class TaxiAgent:
         if self.position == passenger.position:
             # Add the passenger to the agent's list of passengers
             self.passengers.append(passenger)
+        self.set_destination(passenger.destination)
 
     def action_dropoff(self, passenger):
         """

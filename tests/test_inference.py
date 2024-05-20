@@ -1,28 +1,51 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
+import numpy as np
+import osmnx as ox
+
+from agents import AICoordinator, Passenger, TaxiAgent
+from envs import RideShareEnv
 
 
-def test_coordinator_agent():
-    # Create a ride-sharing environment
+def test_get_action():
+    # Create a sample ride-sharing environment
     map_area = "Piedmont, California, USA"
     env = RideShareEnv(map_area)
 
-    # Create some sample car information
-    car_info_1 = {
-        "name": "Car 1",
-        "vin": "ABC123",
-        "description": "Sedan",
-        "mileage_km": 10000,
-        "tankCapacity": 50,
-        "position": {"latitude": 37.824454, "longitude": -122.231589},
+    # Create a sample AICoordinator
+    coordinator = AICoordinator(env)
+
+    # Create a sample observation
+    observation = {
+        "num_agents": 2,
+        "num_passengers": 3,
+        "agent_positions": np.array(
+            [[37.824454, -122.231589], [37.821592, -122.234797]]
+        ),
+        "passenger_positions": np.array(
+            [
+                [37.825000, -122.232000],
+                [37.823000, -122.233000],
+                [37.822000, -122.235000],
+            ]
+        ),
+        "passenger_destinations": np.array(
+            [
+                [37.820000, -122.235000],
+                [37.819000, -122.236000],
+                [37.818000, -122.237000],
+            ]
+        ),
     }
 
-    # Create agent instances using the car information
-    agent_1 = TaxiAgent(env, car_info_1)
+    # Get the action from the AICoordinator
+    action = coordinator.get_action(observation)
 
-    # Add the agents to the environment
-    env.add_agent(agent_1)
+    # Check if the action is of the expected shape and data type
+    assert isinstance(action, np.ndarray)
+    assert action.shape == env.action_space.shape
+    assert action.dtype == env.action_space.dtype
 
-    # Set a destination for the agent #TODO: This is manual setting of agent destination. use AICoordinator to obtain destinations
-    destination = ox.distance.nearest_nodes(env.map_network, -122.234797, 37.821592)
-    agent_1.set_destination(destination)
+    # Check if the action values are within the valid range
+    assert np.all(action >= env.action_space.low)
+    assert np.all(action <= env.action_space.high)

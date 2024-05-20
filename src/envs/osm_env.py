@@ -23,6 +23,7 @@ class RideShareEnv(Env):
         self.passengers = []
         self.observation_space = self._get_observation_space()
         self.action_space = self._get_action_space()
+        self.action_to_node_mapping = self._create_action_to_node_mapping()
 
     def add_agent(self, agent: TaxiAgent):
         """
@@ -73,6 +74,16 @@ class RideShareEnv(Env):
         max_nodes = 1000  # Adjust this value based on your requirements
         action_space = spaces.Discrete(max_nodes)
         return action_space
+
+    def _create_action_to_node_mapping(self):
+        # Create a mapping between action values and OSM nodes
+        action_to_node_mapping = {}
+        nodes = self.map_network.nodes()
+        for action_value in range(self.action_space.n):
+            # Select an OSM node for each action value
+            node_id = nodes[action_value]
+            action_to_node_mapping[action_value] = node_id
+        return action_to_node_mapping
 
     def _get_observation(self):
         observation = {
@@ -144,31 +155,36 @@ class RideShareEnv(Env):
         - Check for ride completion, collisions, or other events
         - Calculate and return rewards, next observations, done flags, and info
         """
-        for agent in self.agents:
-            agent.action_move(timestep)
+        for taxi in self.taxi_agents:
+            taxi.action_move(timestep)
 
         # Check for passenger pickup and drop-off events
-        for agent in self.agents:
+        for taxi in self.taxi_agents:
             for passenger in self.passengers:
-                if (
-                    agent.position == passenger.position
-                    and not passenger.is_picked_up()
-                ):
+                if taxi.position == passenger.position and not passenger.is_picked_up():
                     # Passenger pickup event
-                    agent.action_pickup(passenger)
+                    taxi.action_pickup(passenger)
                     passenger.set_picked_up(True)
                 elif (
-                    agent.position == passenger.destination and passenger.is_picked_up()
+                    taxi.position == passenger.destination and passenger.is_picked_up()
                 ):
                     # Passenger drop-off event
-                    agent.action_dropoff(passenger)
+                    taxi.action_dropoff(passenger)
                     passenger.set_completed(True)
-
-        # Calculate rewards based on passenger waiting time and ride completion
-        rewards = reward_function_basic(self)
 
         # Get the next observation
         next_observation = self._get_observation()
+
+        # Call the AICoordinator to get the actions for the taxi agents
+        actions = self.coordinator.get_actions(next_observation)
+
+        # Assign destinations to taxi agents based on the actions
+        for taxi_id, action in enumerate(actions):
+            destination_node_id = self.action_to_node_mapping[taxi_id][action]
+            self.taxi_agents[taxi_id].set_destination(destination_node_id)
+
+        # Calculate rewards based on passenger waiting time and ride completion
+        rewards = self.reward_function_basic()
 
         # Check if the episode is done
         done = self._is_done()
@@ -176,7 +192,7 @@ class RideShareEnv(Env):
         # Provide additional information if needed
         info = {}
 
-        return next_observation, rewards, done, info
+        return next_observation, actions, rewards, done, info
 
     def get_route(self, start_node, end_node):
         """
@@ -219,8 +235,8 @@ class RideShareEnv(Env):
             ox.plot_graph_route(self.map_network, route, node_size=0, ax=ax)
 
         # Plot taxi_agents on the map
-        for agent in self.taxi_agents:
-            node = self.map_network.nodes[agent.position]
+        for taxi in self.taxi_agents:
+            node = self.map_network.nodes[taxi.position]
             x, y = node["x"], node["y"]
             ax.scatter(x, y, color="blue", marker="o", s=50, label="Agent")
 
