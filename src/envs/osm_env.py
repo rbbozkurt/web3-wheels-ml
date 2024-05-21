@@ -7,7 +7,7 @@ import numpy as np
 import osmnx as ox
 from gymnasium import Env, spaces
 
-from agents import Passenger, TaxiAgent, reward_function_basic
+from ..agents import Passenger, TaxiAgent, reward_function_basic
 
 
 class RideShareEnv(Env):
@@ -21,7 +21,6 @@ class RideShareEnv(Env):
         self.map_network = ox.graph_from_place(map_area, network_type="drive")
         self.taxi_agents = []
         self.passengers = []
-        self.observation_space = self._get_observation_space()
         self.action_space = self._get_action_space()
         self.action_to_node_mapping = self._create_action_to_node_mapping()
         self.current_time_step = 0
@@ -39,6 +38,9 @@ class RideShareEnv(Env):
         )
         agent.position = closest_node
         self.taxi_agents.append(agent)
+        self.observation_space = self._get_observation_space(
+            self.taxi_agents, self.passengers
+        )
 
     def _is_done(self):
         # Check if all passengers have reached their destinations
@@ -52,60 +54,49 @@ class RideShareEnv(Env):
 
         return False
 
-    def _get_observation_space(self):
-        # Define the observation space based on your problem
-        # Include the positions of agents and passengers, and the destinations of passengers
+    def observation_space(self):
+        return self._get_observation_space(self.taxi_agents, self.passengers)
 
-        num_agents = len(self.taxi_agents)
-        num_passengers = len(self.passengers)
+    def _get_observation_space(self, taxi_agents, passengers):
+        num_agents = len(taxi_agents)
+        num_passengers = len(passengers)
 
         observation_space = spaces.Dict(
             {
                 "num_agents": spaces.Discrete(num_agents + 1),
                 "num_passengers": spaces.Discrete(num_passengers + 1),
                 "agent_positions": spaces.Box(
-                    low=np.array([[-180, -90]] * num_agents),
-                    high=np.array([[180, 90]] * num_agents),
-                    dtype=np.float32,
+                    low=-180, high=180, shape=(num_agents, 2), dtype=np.float32
                 ),
                 "passenger_positions": spaces.Box(
-                    low=np.array([[-180, -90]] * num_passengers),
-                    high=np.array([[180, 90]] * num_passengers),
-                    dtype=np.float32,
+                    low=-180, high=180, shape=(num_passengers, 2), dtype=np.float32
                 ),
                 "passenger_destinations": spaces.Box(
-                    low=np.array([[-180, -90]] * num_passengers),
-                    high=np.array([[180, 90]] * num_passengers),
-                    dtype=np.float32,
+                    low=-180, high=180, shape=(num_passengers, 2), dtype=np.float32
                 ),
-                # Add other relevant observations
+                # Add other relevant observations based on TaxiAgent and Passenger properties
             }
         )
         return observation_space
 
     def get_map_bounds(self):
         # Get the bounding box of the map network
-        bounds = ox.utils_geo.bbox_from_network(
-            self.map_network
-        )  # TODO: Double check utils
-        min_lat, min_lng, max_lat, max_lng = bounds
-        return min_lat, min_lng, max_lat, max_lng
+        nodes, edges = ox.utils_graph.graph_to_gdfs(self.map_network)
+        bounds = nodes.total_bounds
+        return bounds
 
     def _get_action_space(self):
-        # Define the action space based on your problem
-        # Example: Selecting a destination node for each agent
-        max_nodes = 1000  # Adjust this value based on your requirements
-        action_space = spaces.Discrete(max_nodes)
+        # Define the action space based on the number of nodes in the map network
+        num_nodes = len(self.map_network.nodes())
+        action_space = spaces.Discrete(num_nodes)
         return action_space
 
     def _create_action_to_node_mapping(self):
         # Create a mapping between action values and OSM nodes
         action_to_node_mapping = {}
-        nodes = self.map_network.nodes()
-        for action_value in range(self.action_space.n):
-            # Select an OSM node for each action value
-            node_id = nodes[action_value]
-            action_to_node_mapping[action_value] = node_id
+        nodes = list(self.map_network.nodes())
+        for action in range(len(nodes)):
+            action_to_node_mapping[action] = nodes[action]
         return action_to_node_mapping
 
     def _get_observation(self):
@@ -122,10 +113,7 @@ class RideShareEnv(Env):
                 ]
             ),
             "passenger_destinations": np.array(
-                [
-                    list(passenger.dropoff_location.values())
-                    for passenger in self.passengers
-                ]
+                [list(passenger.destination.values()) for passenger in self.passengers]
             ),
             # Add other relevant observations
         }
@@ -148,6 +136,9 @@ class RideShareEnv(Env):
         )
         passenger.position = closest_node
         self.passengers.append(passenger)
+        self.observation_space = self._get_observation_space(
+            self.taxi_agents, self.passengers
+        )
 
     def remove_passenger(self, passenger: Passenger):
         """
@@ -202,9 +193,9 @@ class RideShareEnv(Env):
         actions = self.coordinator.get_actions(next_observation)
 
         # Assign destinations to taxi agents based on the actions
-        for taxi_id, action in enumerate(actions):
-            destination_node_id = self.action_to_node_mapping[taxi_id][action]
-            self.taxi_agents[taxi_id].set_destination(destination_node_id)
+        for taxi, action in zip(self.taxi_agents, actions):
+            destination_node_id = self.action_to_node_mapping[action]
+            taxi.set_destination(destination_node_id)
 
         # Calculate rewards based on passenger waiting time and ride completion
         rewards = reward_function_basic(self)

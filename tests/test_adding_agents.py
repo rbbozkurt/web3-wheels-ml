@@ -1,13 +1,20 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
 
+import os
+import sys
+
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import osmnx as ox
 from gymnasium import spaces
 
-from agents import Passenger, TaxiAgent
-from envs import RideShareEnv
+# Add the parent directory of 'tests' to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from src.agents.passenger import Passenger
+from src.agents.taxi_agent import TaxiAgent
+from src.envs.osm_env import RideShareEnv
 
 
 def test_adding_taxi_agents():
@@ -130,7 +137,7 @@ def test_adding_passengers():
     passenger = Passenger(
         passenger_id=1,
         pickup_location={"latitude": 37.824454, "longitude": -122.231589},
-        dropoff_location={"latitude": 37.821592, "longitude": -122.234797},
+        destination={"latitude": 37.821592, "longitude": -122.234797},
     )
     env.add_passenger(passenger)
 
@@ -169,12 +176,12 @@ def test_observation_space():
     passenger_1 = Passenger(
         passenger_id=1,
         pickup_location={"latitude": 37.825000, "longitude": -122.232000},
-        dropoff_location={"latitude": 37.820000, "longitude": -122.235000},
+        destination={"latitude": 37.820000, "longitude": -122.235000},
     )
     passenger_2 = Passenger(
         passenger_id=2,
         pickup_location={"latitude": 37.823000, "longitude": -122.233000},
-        dropoff_location={"latitude": 37.819000, "longitude": -122.236000},
+        destination={"latitude": 37.819000, "longitude": -122.236000},
     )
     env.add_passenger(passenger_1)
     env.add_passenger(passenger_2)

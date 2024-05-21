@@ -1,9 +1,16 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
+import os
+import sys
+
 import numpy as np
 
-from agents import AICoordinator, Passenger, TaxiAgent
-from envs import RideShareEnv
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from src.agents.coordinator_agent import AICoordinator
+from src.agents.passenger import Passenger
+from src.agents.taxi_agent import TaxiAgent
+from src.envs.osm_env import RideShareEnv
 
 
 def test_get_action():
@@ -11,12 +18,24 @@ def test_get_action():
     map_area = "Piedmont, California, USA"
     env = RideShareEnv(map_area)
 
+    # Add sample taxi agents to the environment
+    taxi_info = {
+        "name": "Taxi 1",
+        "vin": "VIN1",
+        "description": "Sample Taxi",
+        "mileage_km": 5000,
+        "tankCapacity": 50,
+        "position": {"latitude": 37.824454, "longitude": -122.231589},
+    }
+    taxi_agent = TaxiAgent(env, taxi_info)
+    env.add_agent(taxi_agent)
+
     # Create a sample AICoordinator
     coordinator = AICoordinator(env)
 
     # Create a sample observation
     observation = {
-        "num_agents": 2,
+        "num_agents": 1,
         "num_passengers": 3,
         "agent_positions": np.array(
             [[37.824454, -122.231589], [37.821592, -122.234797]]
@@ -70,7 +89,7 @@ def test_pickup_dropoff():
     passenger = Passenger(
         passenger_id=1,
         pickup_location={"latitude": 37.824454, "longitude": -122.231589},
-        dropoff_location={"latitude": 37.821592, "longitude": -122.234797},
+        destination={"latitude": 37.821592, "longitude": -122.234797},
     )
 
     # Test pickup action
@@ -89,7 +108,7 @@ def test_pickup_dropoff():
     passenger2 = Passenger(
         passenger_id=2,
         pickup_location={"latitude": 37.824454, "longitude": -122.231589},
-        dropoff_location={"latitude": 37.820000, "longitude": -122.235000},
+        destination={"latitude": 37.820000, "longitude": -122.235000},
     )
     agent.action_pickup(passenger)
     agent.action_pickup(passenger2)
