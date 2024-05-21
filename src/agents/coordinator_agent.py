@@ -58,34 +58,39 @@ class AICoordinator:
         num_agents = self.env.action_space.n
 
         # Create input layers for each observation component
-        num_agents_input = tf.keras.layers.Input(shape=(), name="num_agents")
-        num_passengers_input = tf.keras.layers.Input(shape=(), name="num_passengers")
+        num_agents_input = tf.keras.layers.Input(shape=(1,), name="num_agents")
+        num_passengers_input = tf.keras.layers.Input(shape=(1,), name="num_passengers")
         agent_positions_input = tf.keras.layers.Input(
-            shape=(2,), name="agent_positions"
+            shape=(10, 2), name="agent_positions"
         )
         passenger_positions_input = tf.keras.layers.Input(
-            shape=(2,), name="passenger_positions"
+            shape=(20, 2), name="passenger_positions"
         )
         passenger_destinations_input = tf.keras.layers.Input(
-            shape=(2,), name="passenger_destinations"
+            shape=(20, 2), name="passenger_destinations"
+        )
+
+        # Flatten the position inputs
+        agent_positions_flat = tf.keras.layers.Flatten()(agent_positions_input)
+        passenger_positions_flat = tf.keras.layers.Flatten()(passenger_positions_input)
+        passenger_destinations_flat = tf.keras.layers.Flatten()(
+            passenger_destinations_input
         )
 
         # Concatenate the input layers
         concatenated = tf.keras.layers.concatenate(
             [
-                tf.keras.layers.Reshape((-1,))(num_agents_input),
-                tf.keras.layers.Reshape((-1,))(num_passengers_input),
-                tf.keras.layers.Reshape((-1,))(agent_positions_input),
-                tf.keras.layers.Reshape((-1,))(passenger_positions_input),
-                tf.keras.layers.Reshape((-1,))(passenger_destinations_input),
-            ]
+                num_agents_input,
+                num_passengers_input,
+                agent_positions_flat,
+                passenger_positions_flat,
+                passenger_destinations_flat,
+            ],
+            axis=-1,
         )
 
-        # Convert the concatenated shape to TensorShape
-        concatenated_shape = tf.TensorShape(concatenated.shape)
-
         # Build the hidden layers
-        x = Dense(128, input_shape=concatenated_shape, activation="relu")(concatenated)
+        x = Dense(128, activation="relu")(concatenated)
         x = Dense(64, activation="relu")(x)
         outputs = Dense(num_agents, activation="softmax")(x)
 

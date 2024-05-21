@@ -4,6 +4,7 @@ import os
 import sys
 
 import numpy as np
+import tensorflow as tf
 from gymnasium import spaces
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -86,3 +87,65 @@ def test_observation_space():
     assert observation_space["passenger_destinations"].shape == (2, 2)
 
     print("Observation space test passed!")
+
+
+def test_actor_network_input():
+    # Create a sample ride-sharing environment
+    map_area = "Piedmont, California, USA"
+    env = RideShareEnv(map_area)
+
+    # Add sample taxi agents to the environment
+    taxi_info1 = {
+        "name": "Taxi 1",
+        "vin": "VIN1",
+        "description": "Sample Taxi 1",
+        "mileage_km": 5000,
+        "tankCapacity": 50,
+        "position": {"latitude": 37.824454, "longitude": -122.231589},
+    }
+    taxi_agent1 = TaxiAgent(env, taxi_info1)
+    env.add_agent(taxi_agent1)
+
+    taxi_info2 = {
+        "name": "Taxi 2",
+        "vin": "VIN2",
+        "description": "Sample Taxi 2",
+        "mileage_km": 8000,
+        "tankCapacity": 60,
+        "position": {"latitude": 37.825123, "longitude": -122.232456},
+    }
+    taxi_agent2 = TaxiAgent(env, taxi_info2)
+    env.add_agent(taxi_agent2)
+
+    # Add sample passengers to the environment
+    passenger1 = Passenger(
+        passenger_id=1,
+        pickup_location={"latitude": 37.823567, "longitude": -122.230987},
+        destination={"latitude": 37.828901, "longitude": -122.234567},
+    )
+    env.add_passenger(passenger1)
+
+    passenger2 = Passenger(
+        passenger_id=2,
+        pickup_location={"latitude": 37.824789, "longitude": -122.231234},
+        destination={"latitude": 37.827234, "longitude": -122.235678},
+    )
+    env.add_passenger(passenger2)
+
+    # Create an AICoordinator instance
+    coordinator = AICoordinator(env)
+
+    # Get the actor network
+    actor_network = coordinator._build_actor_network()
+
+    # Get the current observation
+    observation = env.get_observation_space()
+
+    # Feed the observation into the actor network
+    output = actor_network(observation)
+
+    # Check the output shape and data type
+    assert output.shape == (2,)  # Assuming there are 2 agents in the environment
+    assert output.dtype == tf.float32
+
+    print("Actor network input test passed!")
