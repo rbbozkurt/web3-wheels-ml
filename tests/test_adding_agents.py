@@ -5,8 +5,8 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import osmnx as ox
 
-from src.demos.envs.maps.osm_env import RideShareEnv
-from src.demos.taxi_agent import TaxiAgent
+from agents import TaxiAgent
+from envs import RideShareEnv
 
 
 def test_adding_agents():

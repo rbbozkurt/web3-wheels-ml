@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
 
-from ..demos.envs.maps.osm_env import RideShareEnv
+from envs import RideShareEnv
 
 
 class TaxiAgent:
