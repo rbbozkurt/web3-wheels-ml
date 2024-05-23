@@ -1,22 +1,28 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 R. Berkay Bozkurt <resitberkaybozkurt@gmail.com>
 
+import os
 import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from typing import Any, Dict
 
 import networkx as nx
+import osmnx as ox
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from networkx.readwrite import json_graph
 from pydantic import BaseModel
 
+import openstreetsmap_api as osm
 from envs import RideShareEnv
 
 # Initialize FastAPI app
 app = FastAPI()
 
 # Example graph for demonstration
-G = nx.MultiDiGraph()
+G = osm.G_map_from_address("350 5th Ave, New York, New York")
 
 
 # Function to serialize a graph to a dictionary
@@ -99,6 +105,56 @@ async def predict(graph_data: Dict[str, Any]):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.get("/ai-api/move-agent")
+async def move_agent(agent: Dict[str, Any]):
+    try:
+        global G
+        print("agent", agent)
+        longitude, latitude = osm.find_x_y_coordinates_of_node(G, agent["next_node_id"])
+        return {
+            "vehicle_id": agent["vehicle_id"],
+            "position": {
+                "node_id": agent["next_node_id"],
+                "longitude": longitude,
+                "latitude": latitude,
+            },
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/map-api/find-closest-node")
+async def find_closest_node(vehicle: Dict[str, Any]):
+    try:
+        global G
+        print("vehicle", vehicle)
+        closest_node_id = osm.find_closest_node(
+            G, vehicle["position"]["longitude"], vehicle["position"]["latitude"]
+        )
+        print("closest_node_id", closest_node_id)
+        longitude, latitude = osm.find_x_y_coordinates_of_node(G, closest_node_id)
+        return {
+            "vehicle_id": vehicle["vehicle_id"],
+            "position": {
+                "node_id": closest_node_id,
+                "longitude": longitude,
+                "latitude": latitude,
+            },
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/map-api/find-distance")
+async def find_distance(data: Dict[str, Any]):
+    try:
+        global G
+        distance = osm.find_distance(G, data["source_node_id"], data["target_node_id"])
+        return {"passenger_id": data["passenger_id"], "distance": distance}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 # Run the app with Uvicorn on a custom port
 if __name__ == "__main__":
     if len(sys.argv) != 3 or sys.argv[1] != "--port":
@@ -106,6 +162,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     port = int(sys.argv[2])
+    print(f"Running API on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
 
     env = RideShareEnv()
