@@ -107,6 +107,32 @@ async def predict(graph_data: Dict[str, Any]):
 
 @app.get("/ai-api/move-agent")
 async def move_agent(agent: Dict[str, Any]):
+    """
+    Move the agent to the next node based on the provided agent information.
+
+    Args:
+        agent (Dict[str, Any]): The agent information containing the vehicle ID and the next node ID.
+
+        eg. data = {
+            "vehicle_id": 1,
+            "next_node_id": 2,
+        }
+
+    Returns:
+        Dict[str, Any]: The updated position of the agent, including the node ID, longitude, and latitude.
+
+        eg. return {
+            "vehicle_id": 1,
+            "position": {
+                "node_id": 2,
+                "longitude": 37.824454,
+                "latitude": -122.231589,
+            },
+        }
+
+    Raises:
+        HTTPException: If an error occurs during the movement of the agent.
+    """
     try:
         global G
         print("agent", agent)
@@ -124,17 +150,43 @@ async def move_agent(agent: Dict[str, Any]):
 
 
 @app.get("/map-api/find-closest-node")
-async def find_closest_node(vehicle: Dict[str, Any]):
+async def find_closest_node(data: Dict[str, Any]):
+    """
+    Find the closest node in the map to the given vehicle's position.
+
+    Args:
+        data (Dict[str, Any]): A dictionary containing information about the vehicle.
+
+        eg. data = {
+            "vehicle_id": 1,
+            "position": {
+                "longitude": 23.824454,
+                "latitude": -112.54332,
+            },
+        }
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the vehicle's ID and the closest node's ID, longitude, and latitude.
+
+        eg. return {
+            "vehicle_id": 1,
+            "position": {
+                "node_id": 2,
+                "longitude": 37.824454,
+                "latitude": -122.231589,
+            },
+        }
+    """
     try:
         global G
-        print("vehicle", vehicle)
+        print("vehicle", data)
         closest_node_id = osm.find_closest_node(
-            G, vehicle["position"]["longitude"], vehicle["position"]["latitude"]
+            G, data["position"]["longitude"], data["position"]["latitude"]
         )
         print("closest_node_id", closest_node_id)
         longitude, latitude = osm.find_x_y_coordinates_of_node(G, closest_node_id)
         return {
-            "vehicle_id": vehicle["vehicle_id"],
+            "vehicle_id": data["vehicle_id"],
             "position": {
                 "node_id": closest_node_id,
                 "longitude": longitude,
@@ -147,6 +199,33 @@ async def find_closest_node(vehicle: Dict[str, Any]):
 
 @app.get("/map-api/find-distance")
 async def find_distance(data: Dict[str, Any]):
+    """
+    Calculate the distance between two nodes in the map.
+
+    Args:
+        data (Dict[str, Any]): A dictionary containing the following keys:
+            - source_node_id (Any): The ID of the source node.
+            - target_node_id (Any): The ID of the target node.
+            - passenger_id (Any): The ID of the passenger.
+
+        eg. data = {
+            "passenger_id": 1,
+            "source_node_id": 2,
+            "target_node_id": 3,
+        }
+
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the passenger ID and the calculated distance.
+
+        eg. return {
+            "passenger_id": 1,
+            "distance": 1000,
+        }
+
+    Raises:
+        HTTPException: If an error occurs during the distance calculation.
+    """
     try:
         global G
         distance = osm.find_distance(G, data["source_node_id"], data["target_node_id"])
