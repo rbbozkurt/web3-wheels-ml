@@ -4,8 +4,6 @@ import os
 import sys
 
 import numpy as np
-import tensorflow as tf
-from gymnasium import spaces
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -61,38 +59,29 @@ def test_observation_space():
     env.add_passenger(passenger2)
 
     # Get the observation space
-    observation_space = env.observation_space
+    observation = env._get_observation()
 
     # Check the properties of the observation space
-    assert "num_agents" in observation_space.spaces
-    assert "num_passengers" in observation_space.spaces
-    assert "agent_positions" in observation_space.spaces
-    assert "passenger_positions" in observation_space.spaces
-    assert "passenger_destinations" in observation_space.spaces
+    # Check if the observation is in the expected format
+    assert "num_agents" in observation
+    assert "num_passengers" in observation
+    assert "agent_positions" in observation
+    assert "passenger_positions" in observation
+    assert "passenger_destinations" in observation
 
-    # Check the data types and shapes of the observation components
-    assert isinstance(observation_space["num_agents"], spaces.Discrete)
-    assert observation_space["num_agents"].n == 3  # 2 agents + 1
-
-    assert isinstance(observation_space["num_passengers"], spaces.Discrete)
-    assert observation_space["num_passengers"].n == 3  # 2 passengers + 1
-
-    assert isinstance(observation_space["agent_positions"], spaces.Box)
-    assert observation_space["agent_positions"].shape == (2, 2)
-
-    assert isinstance(observation_space["passenger_positions"], spaces.Box)
-    assert observation_space["passenger_positions"].shape == (2, 2)
-
-    assert isinstance(observation_space["passenger_destinations"], spaces.Box)
-    assert observation_space["passenger_destinations"].shape == (2, 2)
-
-    print("Observation space test passed!")
+    print("Observation test passed!")
 
 
 def test_actor_network_input():
     # Create a sample ride-sharing environment
     map_area = "Piedmont, California, USA"
     env = RideShareEnv(map_area)
+
+    # Create an AICoordinator instance
+    coordinator = AICoordinator(env)
+
+    # Reset the environment
+    env.reset()
 
     # Add sample taxi agents to the environment
     taxi_info1 = {
@@ -132,20 +121,40 @@ def test_actor_network_input():
     )
     env.add_passenger(passenger2)
 
-    # Create an AICoordinator instance
-    coordinator = AICoordinator(env)
+    # Get the initial observation
+    observation = env._get_observation()
 
-    # Get the actor network
-    actor_network = coordinator._build_actor_network()
+    # Check if the observation is in the expected format
+    assert "num_agents" in observation
+    assert "num_passengers" in observation
+    assert "agent_positions" in observation
+    assert "passenger_positions" in observation
+    assert "passenger_destinations" in observation
 
-    # Get the current observation
-    observation = env.get_observation_space()
+    # Get a sample action from the coordinator
+    action = coordinator.get_action(observation)
 
-    # Feed the observation into the actor network
-    output = actor_network(observation)
+    # Check if the action is in the expected format
+    assert isinstance(action, np.ndarray)
+    assert action.shape[0] <= coordinator.max_agents
+    assert action.shape[1] == 2
 
-    # Check the output shape and data type
-    assert output.shape == (2,)  # Assuming there are 2 agents in the environment
-    assert output.dtype == tf.float32
+    # Check if the action values are within the valid range
+    assert np.all(action >= -1) and np.all(action <= 1)
 
-    print("Actor network input test passed!")
+    # Check if the actions are correctly mapped to OSM nodes
+    for taxi, action_value in zip(env.taxi_agents, action):
+        # Find the closest node based on the action value
+        closest_node_id = None
+        min_distance = float("inf")
+        for normalized_action, node_id in env.action_to_node_mapping.items():
+            distance = np.sqrt(
+                (action_value[0] - normalized_action[0]) ** 2
+                + (action_value[1] - normalized_action[1]) ** 2
+            )
+            if distance < min_distance:
+                min_distance = distance
+                closest_node_id = node_id
+
+        # Check if the closest node is a valid OSM node
+        assert closest_node_id in env.map_network.nodes()

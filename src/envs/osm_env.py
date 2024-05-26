@@ -22,10 +22,11 @@ class RideShareEnv(Env):
         self.taxi_agents = []
         self.passengers = []
         self.action_space = self._get_action_space()
+        self.map_bounds = self.get_map_bounds()
         self.action_to_node_mapping = self._create_action_to_node_mapping()
         self.current_time_step = 0
         self.max_time_steps = max_time_steps
-        self.map_bounds = self.get_map_bounds()
+        self.observation_space = self._get_observation_space()
 
     def add_agent(self, agent: TaxiAgent):
         """
@@ -38,9 +39,6 @@ class RideShareEnv(Env):
         )
         agent.position = closest_node
         self.taxi_agents.append(agent)
-        self.observation_space = self._get_observation_space(
-            self.taxi_agents, self.passengers
-        )
 
     def _is_done(self):
         # Check if all passengers have reached their destinations
@@ -57,22 +55,26 @@ class RideShareEnv(Env):
     def observation_space(self):
         return self._get_observation_space(self.taxi_agents, self.passengers)
 
-    def _get_observation_space(self, taxi_agents, passengers):
-        num_agents = len(taxi_agents)
-        num_passengers = len(passengers)
+    def _get_observation_space(self):
+        max_agents = 10  # Define the maximum number of agents
+        max_passengers = 20  # Define the maximum number of passengers
 
         observation_space = spaces.Dict(
             {
-                "num_agents": spaces.Discrete(num_agents + 1),
-                "num_passengers": spaces.Discrete(num_passengers + 1),
+                "num_agents": spaces.Box(
+                    low=0, high=max_agents, shape=(1,), dtype=np.int32
+                ),
+                "num_passengers": spaces.Box(
+                    low=0, high=max_passengers, shape=(1,), dtype=np.int32
+                ),
                 "agent_positions": spaces.Box(
-                    low=-180, high=180, shape=(num_agents, 2), dtype=np.float32
+                    low=-180, high=180, shape=(max_agents, 2), dtype=np.float32
                 ),
                 "passenger_positions": spaces.Box(
-                    low=-180, high=180, shape=(num_passengers, 2), dtype=np.float32
+                    low=-180, high=180, shape=(max_passengers, 2), dtype=np.float32
                 ),
                 "passenger_destinations": spaces.Box(
-                    low=-180, high=180, shape=(num_passengers, 2), dtype=np.float32
+                    low=-180, high=180, shape=(max_passengers, 2), dtype=np.float32
                 ),
                 # Add other relevant observations based on TaxiAgent and Passenger properties
             }
@@ -86,35 +88,71 @@ class RideShareEnv(Env):
         return bounds
 
     def _get_action_space(self):
-        # Define the action space based on the number of nodes in the map network
-        num_nodes = len(self.map_network.nodes())
-        action_space = spaces.Discrete(num_nodes)
-        return action_space
+        num_agents = len(self.taxi_agents)
+        return spaces.Box(low=-1, high=1, shape=(num_agents, 2), dtype=float)
 
     def _create_action_to_node_mapping(self):
-        # Create a mapping between action values and OSM nodes
         action_to_node_mapping = {}
         nodes = list(self.map_network.nodes())
-        for action in range(len(nodes)):
-            action_to_node_mapping[action] = nodes[action]
+        num_nodes = len(nodes)
+
+        # Get the longitude and latitude coordinates of each node
+        node_coords = np.array(
+            [
+                (self.map_network.nodes[node]["x"], self.map_network.nodes[node]["y"])
+                for node in nodes
+            ]
+        )
+
+        # Normalize the node coordinates to the range [-1, 1] based on the map bounds
+        normalized_coords = (node_coords - self.map_bounds[[0, 1]]) / (
+            self.map_bounds[[2, 3]] - self.map_bounds[[0, 1]]
+        ) * 2 - 1
+
+        # Create the action-to-node mapping using the normalized coordinates
+        for i in range(num_nodes):
+            action_to_node_mapping[tuple(normalized_coords[i])] = nodes[i]
+
         return action_to_node_mapping
 
     def _get_observation(self):
+        num_agents = len(self.taxi_agents)
+        num_passengers = len(self.passengers)
+
+        agent_positions = np.zeros((self.observation_space["agent_positions"].shape))
+        agent_positions[:num_agents] = np.array(
+            [(agent.position) for agent in self.taxi_agents]
+        )
+
+        passenger_positions = np.zeros(
+            (self.observation_space["passenger_positions"].shape)
+        )
+
+        for i, passenger in enumerate(self.passengers):
+            if i >= num_passengers:
+                break
+            pickup_location = passenger.pickup_location
+            passenger_positions[i] = np.array(
+                [pickup_location["longitude"], pickup_location["latitude"]]
+            )
+
+        passenger_destinations = np.zeros(
+            (self.observation_space["passenger_destinations"].shape)
+        )
+        for i, passenger in enumerate(self.passengers):
+            if i >= num_passengers:
+                break
+            destination = passenger.destination
+            passenger_destinations[i] = np.array(
+                [destination["longitude"], destination["latitude"]]
+            )
+
         observation = {
-            "num_agents": len(self.taxi_agents),
-            "num_passengers": len(self.passengers),
-            "agent_positions": np.array(
-                [list(agent.position.values()) for agent in self.taxi_agents]
-            ),
-            "passenger_positions": np.array(
-                [
-                    list(passenger.pickup_location.values())
-                    for passenger in self.passengers
-                ]
-            ),
-            "passenger_destinations": np.array(
-                [list(passenger.destination.values()) for passenger in self.passengers]
-            ),
+            "num_agents": np.array([num_agents]),
+            "num_passengers": np.array([num_passengers]),
+            "agent_positions": agent_positions,
+            "passenger_positions": passenger_positions,
+            "passenger_destinations": passenger_destinations,
             # Add other relevant observations
         }
         return observation
@@ -136,9 +174,6 @@ class RideShareEnv(Env):
         )
         passenger.position = closest_node
         self.passengers.append(passenger)
-        self.observation_space = self._get_observation_space(
-            self.taxi_agents, self.passengers
-        )
 
     def remove_passenger(self, passenger: Passenger):
         """
@@ -159,8 +194,8 @@ class RideShareEnv(Env):
         # Reset passengers
         self.passengers = []
         # Create the initial observation
-        observation = self._get_observation()
-        return observation
+        # observation = self._get_observation() #TODO: Why does reset need to get observation?
+        # return observation
 
     def step(self, timestep):
         """
@@ -194,9 +229,18 @@ class RideShareEnv(Env):
 
         # Assign destinations to taxi agents based on the actions
         for taxi, action in zip(self.taxi_agents, actions):
-            destination_node_id = self.action_to_node_mapping[action]
-            taxi.set_destination(destination_node_id)
-
+            # Find the closest node based on the continuous action value
+            closest_node_id = None
+            min_distance = float("inf")
+            for normalized_action, node_id in self.action_to_node_mapping.items():
+                distance = np.sqrt(
+                    (action[0] - normalized_action[0]) ** 2
+                    + (action[1] - normalized_action[1]) ** 2
+                )
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_node_id = node_id
+            taxi.set_destination(closest_node_id)
         # Calculate rewards based on passenger waiting time and ride completion
         rewards = reward_function_basic(self)
 

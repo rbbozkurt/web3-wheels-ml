@@ -1,13 +1,19 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
 
+import os
 import random
+import sys
 
 import yaml
 from memory import ReplayBuffer
 
-from agents import AICoordinator, Passenger, TaxiAgent
-from envs import RideShareEnv
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
+
+from agents.coordinator_agent import AICoordinator
+from agents.passenger import Passenger
+from agents.taxi_agent import TaxiAgent
+from envs.osm_env import RideShareEnv
 
 # Load training parameters from ppo_config.yml file
 with open("ppo_config.yml", "r") as f:
@@ -16,7 +22,9 @@ with open("ppo_config.yml", "r") as f:
 
 def train(num_episodes, batch_size, replay_buffer_capacity):
     env = RideShareEnv()
-    coordinator = AICoordinator(env)
+    coordinator = AICoordinator(
+        env, max_agents=config["max_taxis"], max_passengers=config["max_passengers"]
+    )
     replay_buffer = ReplayBuffer(replay_buffer_capacity)
 
     for episode in range(num_episodes):
@@ -36,8 +44,8 @@ def train(num_episodes, batch_size, replay_buffer_capacity):
                 "mileage_km": random.randint(1000, 10000),
                 "tankCapacity": random.randint(40, 60),
                 "position": {
-                    "latitude": random.uniform(env.map_bounds[0], env.map_bounds[2]),
-                    "longitude": random.uniform(env.map_bounds[1], env.map_bounds[3]),
+                    "latitude": random.uniform(env.map_bounds[1], env.map_bounds[3]),
+                    "longitude": random.uniform(env.map_bounds[0], env.map_bounds[2]),
                 },
             }
             taxi_agent = TaxiAgent(env, taxi_info)
@@ -51,18 +59,18 @@ def train(num_episodes, batch_size, replay_buffer_capacity):
                         "passenger_id": len(env.passengers) + 1,
                         "pickup_location": {
                             "latitude": random.uniform(
-                                env.map_bounds[0], env.map_bounds[2]
+                                env.map_bounds[1], env.map_bounds[3]
                             ),
                             "longitude": random.uniform(
-                                env.map_bounds[1], env.map_bounds[3]
+                                env.map_bounds[0], env.map_bounds[2]
                             ),
                         },
                         "dropoff_location": {
                             "latitude": random.uniform(
-                                env.map_bounds[0], env.map_bounds[2]
+                                env.map_bounds[1], env.map_bounds[3]
                             ),
                             "longitude": random.uniform(
-                                env.map_bounds[1], env.map_bounds[3]
+                                env.map_bounds[0], env.map_bounds[2]
                             ),
                         },
                     }
