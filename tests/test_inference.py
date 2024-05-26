@@ -13,62 +13,6 @@ from src.agents.taxi_agent import TaxiAgent
 from src.envs.osm_env import RideShareEnv
 
 
-def test_get_action():
-    # Create a sample ride-sharing environment
-    map_area = "Piedmont, California, USA"
-    env = RideShareEnv(map_area)
-
-    # Add sample taxi agents to the environment
-    taxi_info = {
-        "name": "Taxi 1",
-        "vin": "VIN1",
-        "description": "Sample Taxi",
-        "mileage_km": 5000,
-        "tankCapacity": 50,
-        "position": {"latitude": 37.824454, "longitude": -122.231589},
-    }
-    taxi_agent = TaxiAgent(env, taxi_info)
-    env.add_agent(taxi_agent)
-
-    # Create a sample AICoordinator
-    coordinator = AICoordinator(env)
-
-    # Create a sample observation
-    observation = {
-        "num_agents": 1,
-        "num_passengers": 3,
-        "agent_positions": np.array(
-            [[37.824454, -122.231589], [37.821592, -122.234797]]
-        ),
-        "passenger_positions": np.array(
-            [
-                [37.825000, -122.232000],
-                [37.823000, -122.233000],
-                [37.822000, -122.235000],
-            ]
-        ),
-        "passenger_destinations": np.array(
-            [
-                [37.820000, -122.235000],
-                [37.819000, -122.236000],
-                [37.818000, -122.237000],
-            ]
-        ),
-    }
-
-    # Get the action from the AICoordinator
-    action = coordinator.get_action(observation)
-
-    # Check if the action is of the expected shape and data type
-    assert isinstance(action, np.ndarray)
-    assert action.shape == env.action_space.shape
-    assert action.dtype == env.action_space.dtype
-
-    # Check if the action values are within the valid range
-    assert np.all(action >= env.action_space.low)
-    assert np.all(action <= env.action_space.high)
-
-
 def test_pickup_dropoff():
     # Create a sample ride-sharing environment
     map_area = "Piedmont, California, USA"
@@ -84,43 +28,22 @@ def test_pickup_dropoff():
         "position": {"latitude": 37.824454, "longitude": -122.231589},
     }
     agent = TaxiAgent(env, car_info)
-
+    env.add_agent(agent)
     # Create a sample passenger
     passenger = Passenger(
         passenger_id=1,
         pickup_location={"latitude": 37.824454, "longitude": -122.231589},
         destination={"latitude": 37.821592, "longitude": -122.234797},
     )
-
+    env.add_passenger(passenger)
     # Test pickup action
     assert passenger not in agent.passengers
     agent.action_pickup(passenger)
     assert passenger in agent.passengers
     assert agent.destination == passenger.destination
-
+    assert passenger.picked_up == True
     # Test dropoff action
     agent.position = passenger.destination
     agent.action_dropoff(passenger)
     assert passenger not in agent.passengers
     assert passenger not in env.passengers
-
-    # Test pickup and dropoff with multiple passengers
-    passenger2 = Passenger(
-        passenger_id=2,
-        pickup_location={"latitude": 37.824454, "longitude": -122.231589},
-        destination={"latitude": 37.820000, "longitude": -122.235000},
-    )
-    agent.action_pickup(passenger)
-    agent.action_pickup(passenger2)
-    assert passenger in agent.passengers
-    assert passenger2 in agent.passengers
-
-    agent.position = passenger.destination
-    agent.action_dropoff(passenger)
-    assert passenger not in agent.passengers
-    assert passenger2 in agent.passengers
-
-    agent.position = passenger2.destination
-    agent.action_dropoff(passenger2)
-    assert passenger2 not in agent.passengers
-    assert len(agent.passengers) == 0

@@ -72,7 +72,7 @@ def test_observation_space():
     print("Observation test passed!")
 
 
-def test_actor_network_input():
+def test_actor_network():
     # Create a sample ride-sharing environment
     map_area = "Piedmont, California, USA"
     env = RideShareEnv(map_area)
