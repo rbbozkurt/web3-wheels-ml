@@ -38,7 +38,7 @@ class TaxiAgent:
         This can be used to set the passenger pickup destination, drop off destination,
         or some other destination by a central planning agent.
         """
-        self.destination.append(destination)
+        self.destination = destination
 
     def get_observation(self):
         """
@@ -131,6 +131,7 @@ class TaxiAgent:
             # Add the passenger to the agent's list of passengers
             self.passengers.append(passenger)
         self.set_destination(passenger.destination)
+        passenger.set_picked_up(True)
 
     def action_dropoff(self, passenger):
         """
@@ -144,3 +145,4 @@ class TaxiAgent:
 
             # Mark the passenger as dropped off in the environment
             self.env.remove_passenger(passenger)
+        passenger.set_completed(True)
