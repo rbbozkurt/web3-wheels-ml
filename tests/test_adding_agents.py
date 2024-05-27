@@ -7,7 +7,6 @@ import sys
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import osmnx as ox
-from gymnasium import spaces
 
 # Add the parent directory of 'tests' to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

@@ -168,15 +168,4 @@ cache/*
 *mp4
 *.gif
 cache/*.json
-src/training/logger/events.out.tfevents.1716834391.harshil-ubuntu.1292037.0
-src/training/logger/events.out.tfevents.1716834720.harshil-ubuntu.1296271.0
-src/training/logger/events.out.tfevents.1716834985.harshil-ubuntu.1299731.0
-src/training/logger/events.out.tfevents.1716835034.harshil-ubuntu.1300496.0
-src/training/logger/events.out.tfevents.1716835255.harshil-ubuntu.1303415.0
-src/training/logger/events.out.tfevents.1716835482.harshil-ubuntu.1306469.0
-src/training/logger/events.out.tfevents.1716836120.harshil-ubuntu.1315107.0
-src/training/logger/events.out.tfevents.1716836414.harshil-ubuntu.1319152.0
-src/training/logger/events.out.tfevents.1716836881.harshil-ubuntu.1325241.0
-src/training/logger/events.out.tfevents.1716836922.harshil-ubuntu.1325968.0
-src/training/logger/log.txt
-src/training/logger/progress.csv
+src/training/logger/*

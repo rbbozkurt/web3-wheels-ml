@@ -7,7 +7,13 @@ import numpy as np
 import osmnx as ox
 from gymnasium import Env, spaces
 
-from ..agents import AICoordinator, Passenger, TaxiAgent, reward_function_basic
+from ..agents import (
+    AICoordinator,
+    Passenger,
+    TaxiAgent,
+    reward_function_2,
+    reward_function_basic,
+)
 
 
 class RideShareEnv(Env):
@@ -42,14 +48,14 @@ class RideShareEnv(Env):
         self.taxi_agents.append(agent)
 
     def _is_done(self):
+        # Check if the maximum time step limit has been reached
+        if self.current_time_step >= self.max_time_steps:
+            return True
+
         # Check if all passengers have reached their destinations
         for passenger in self.passengers:
             if not passenger.completed:
                 return False
-
-        # Check if the maximum time step limit has been reached
-        if self.current_time_step >= self.max_time_steps:
-            return True
 
         return False
 
@@ -117,22 +123,32 @@ class RideShareEnv(Env):
         return action_to_node_mapping
 
     def _get_observation(self):
-        # TODO: Only include taxi_agents without destinations and passengers not picked up
         num_agents = len(self.taxi_agents)
         num_passengers = len(self.passengers)
 
+        # Filter taxi agents without destinations
+        taxi_agents_without_dest = [
+            agent for agent in self.taxi_agents if not agent.destination
+        ]
+        num_agents_without_dest = len(taxi_agents_without_dest)
+
         agent_positions = np.zeros((self.observation_space["agent_positions"].shape))
-        for i, agent in enumerate(self.taxi_agents):
+        for i, agent in enumerate(taxi_agents_without_dest):
             agent_positions[i] = np.array(
                 [agent.position["longitude"], agent.position["latitude"]]
             )
 
+        # Filter passengers not picked up
+        passengers_not_picked_up = [
+            passenger for passenger in self.passengers if not passenger.picked_up
+        ]
+        num_passengers_not_picked_up = len(passengers_not_picked_up)
+
         passenger_positions = np.zeros(
             (self.observation_space["passenger_positions"].shape)
         )
-
-        for i, passenger in enumerate(self.passengers):
-            if i >= num_passengers:
+        for i, passenger in enumerate(passengers_not_picked_up):
+            if i >= num_passengers_not_picked_up:
                 break
             pickup_location = passenger.pickup_location
             passenger_positions[i] = np.array(
@@ -142,8 +158,8 @@ class RideShareEnv(Env):
         passenger_destinations = np.zeros(
             (self.observation_space["passenger_destinations"].shape)
         )
-        for i, passenger in enumerate(self.passengers):
-            if i >= num_passengers:
+        for i, passenger in enumerate(passengers_not_picked_up):
+            if i >= num_passengers_not_picked_up:
                 break
             destination = passenger.destination
             passenger_destinations[i] = np.array(
@@ -151,8 +167,8 @@ class RideShareEnv(Env):
             )
 
         observation = {
-            "num_agents": np.array([num_agents]),
-            "num_passengers": np.array([num_passengers]),
+            "num_agents": np.array([num_agents_without_dest]),
+            "num_passengers": np.array([num_passengers_not_picked_up]),
             "agent_positions": agent_positions,
             "passenger_positions": passenger_positions,
             "passenger_destinations": passenger_destinations,
@@ -227,10 +243,10 @@ class RideShareEnv(Env):
                 ):
                     # Passenger pickup event
                     taxi.action_pickup(passenger)
-                    passenger.set_picked_up(True)
+
                 elif (
                     taxi.position["node"] == passenger.destination["node"]
-                    and passenger.is_picked_up()
+                    and passenger.which_taxi == taxi.name
                 ):
                     # Passenger drop-off event
                     taxi.action_dropoff(passenger)
@@ -239,34 +255,41 @@ class RideShareEnv(Env):
         # Get the next observation
         next_observation = self._get_observation()
 
-        # Call the AICoordinator to get the actions for the taxi agents
-        actions = self.coordinator.get_action(next_observation)
+        # Check if any taxi does not have a destination
+        if any(not taxi.destination for taxi in self.taxi_agents):
+            # Call the AICoordinator to get the actions for the taxi agents
+            actions = self.coordinator.get_action(next_observation)
 
-        # Assign destinations to taxi agents based on the actions
-        for taxi, action in zip(self.taxi_agents, actions):
-            # Find the closest node based on the continuous action value
-            closest_node_id = None
-            min_distance = float("inf")
-            for normalized_action, node_id in self.action_to_node_mapping.items():
-                distance = np.sqrt(
-                    (action[0] - normalized_action[0]) ** 2
-                    + (action[1] - normalized_action[1]) ** 2
-                )
-                if distance < min_distance:
-                    min_distance = distance
-                    closest_node_id = node_id
-            destination = {
-                "node": closest_node_id,
-                "longitude": self.map_network.nodes[closest_node_id]["x"],
-                "latitude": self.map_network.nodes[closest_node_id]["y"],
-            }
-            taxi.set_destination(destination["node"])
+            # Assign destinations to taxi agents based on the actions
+            for taxi, action in zip(self.taxi_agents, actions):
+                # Find the closest node based on the continuous action value
+                closest_node_id = None
+                min_distance = float("inf")
+                for normalized_action, node_id in self.action_to_node_mapping.items():
+                    distance = np.sqrt(
+                        (action[0] - normalized_action[0]) ** 2
+                        + (action[1] - normalized_action[1]) ** 2
+                    )
+                    if distance < min_distance:
+                        min_distance = distance
+                        closest_node_id = node_id
+                destination = {
+                    "node": closest_node_id,
+                    "longitude": self.map_network.nodes[closest_node_id]["x"],
+                    "latitude": self.map_network.nodes[closest_node_id]["y"],
+                }
+                taxi.set_destination(destination["node"])
+        else:
+            actions = None
+
         # Calculate rewards based on passenger waiting time and ride completion
-        rewards = reward_function_basic(self)
+        rewards = reward_function_2(self)
 
         # Check if the episode is done
         done = self._is_done()
         self.current_time_step += 1
+        print("Time step: ", self.current_time_step)
+
         # Provide additional information if needed
         info = {}
 

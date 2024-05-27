@@ -110,7 +110,7 @@ class TaxiAgent:
             else:
                 # Process the route
                 distance = self.env.get_path_distance(path)
-                print(f"Route found with distance {distance}")
+                # print(f"Route found with distance {distance}")
                 self.path = path
             # Calculate the total distance of the path
             total_distance = self.env.get_path_distance(path)
@@ -159,6 +159,8 @@ class TaxiAgent:
             self.passengers.append(passenger)
         self.set_destination(passenger.destination["node"])
         passenger.set_picked_up(True)
+        passenger.which_taxi = self.name
+        print(self.name, "picked up passenger", passenger.passenger_id)
 
     def action_dropoff(self, passenger):
         """
@@ -166,10 +168,12 @@ class TaxiAgent:
         If so, passenger is dropped off and removed from
         agent's list of passengers
         """
-        if self.position == passenger.destination:
+        if self.position["node"] == passenger.destination["node"]:
             # Remove the passenger from the agent's list of passengers
             self.passengers.remove(passenger)
 
             # Mark the passenger as dropped off in the environment
             self.env.remove_passenger(passenger)
-        passenger.set_completed(True)
+            passenger.set_completed(True)
+            print(self.name, "dropped off passenger", passenger.passenger_id)
+            self.destination = None  # Reset the destination

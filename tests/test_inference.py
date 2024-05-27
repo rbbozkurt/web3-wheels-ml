@@ -3,11 +3,8 @@
 import os
 import sys
 
-import numpy as np
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.agents.coordinator_agent import AICoordinator
 from src.agents.passenger import Passenger
 from src.agents.taxi_agent import TaxiAgent
 from src.envs.osm_env import RideShareEnv
@@ -40,10 +37,10 @@ def test_pickup_dropoff():
     assert passenger not in agent.passengers
     agent.action_pickup(passenger)
     assert passenger in agent.passengers
-    assert agent.destination == passenger.destination
+    assert agent.destination == passenger.destination["node"]
     assert passenger.picked_up == True
     # Test dropoff action
-    agent.position = passenger.destination
+    agent.position["node"] = passenger.destination["node"]
     agent.action_dropoff(passenger)
     assert passenger not in agent.passengers
     assert passenger not in env.passengers

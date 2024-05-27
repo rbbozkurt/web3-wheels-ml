@@ -4,6 +4,7 @@ import os
 import sys
 
 import numpy as np
+import yaml
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -74,12 +75,15 @@ def test_observation_space():
 
 def test_actor_network():
     # Create a sample ride-sharing environment
+    # Load training parameters from ppo_config.yml file
+    with open("src/training/ppo_config.yml", "r") as f:
+        config = yaml.safe_load(f)
     map_area = "Piedmont, California, USA"
     env = RideShareEnv(map_area)
 
     # Create an AICoordinator instance
-    coordinator = AICoordinator(env)
-
+    coordinator = AICoordinator(env, config)
+    env.coordinator = coordinator
     # Reset the environment
     env.reset()
 

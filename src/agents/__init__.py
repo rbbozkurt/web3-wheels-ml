@@ -3,5 +3,5 @@
 
 from .coordinator_agent import AICoordinator
 from .passenger import Passenger
-from .reward import reward_function_basic
+from .reward import *
 from .taxi_agent import TaxiAgent

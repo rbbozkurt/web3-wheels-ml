@@ -25,6 +25,7 @@ class Passenger:
         self.ride_request_time = request_time
         self.waiting_time = 0
         self.picked_up = False
+        self.which_taxi = []
         self.completed = False
 
     def update_waiting_time(self):

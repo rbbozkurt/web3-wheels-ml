@@ -34,10 +34,9 @@ class ReplayBuffer:
         self.position = (self.position + 1) % self.capacity
 
     def sample(self, batch_size):
-        # batch = np.random.choice(self.buffer, batch_size, replace=False)
-        batch = self.buffer[
-            :batch_size
-        ]  # TODO: random choice not working. Take first batch_size instead
+        indices = np.random.choice(len(self.buffer), batch_size, replace=False)
+        batch = [self.buffer[i] for i in indices]
+
         states, actions, rewards, next_states, dones = zip(*batch)
 
         # Convert dictionaries to numpy arrays
