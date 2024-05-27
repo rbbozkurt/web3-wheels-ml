@@ -20,6 +20,7 @@ class Passenger:
             "longitude": destination["longitude"],
             "latitude": destination["latitude"],
         }
+
         self.position = pickup_location
         self.ride_request_time = request_time
         self.waiting_time = 0

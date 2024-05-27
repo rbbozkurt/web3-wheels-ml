@@ -94,7 +94,7 @@ def test_agent_movement():
     # Define the update function for the animation
     def update(frame):
         # Check if the agent has reached the destination
-        if agent_1.position == destination:
+        if agent_1.position["node"] == destination:
             state["reached_destination"] = True
 
         else:
@@ -110,7 +110,7 @@ def test_agent_movement():
             ax.set_title(f"Step: {frame}")
 
     # Get the shortest path from the agent's current position to the destination
-    path = env.get_route(agent_1.position, destination)
+    path = env.get_route(agent_1.position["node"], destination)
 
     # Create the animation
     ani = animation.FuncAnimation(fig, update, frames=max_steps, interval=500)

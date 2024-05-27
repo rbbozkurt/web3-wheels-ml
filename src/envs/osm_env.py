@@ -7,7 +7,7 @@ import numpy as np
 import osmnx as ox
 from gymnasium import Env, spaces
 
-from ..agents import Passenger, TaxiAgent, reward_function_basic
+from ..agents import AICoordinator, Passenger, TaxiAgent, reward_function_basic
 
 
 class RideShareEnv(Env):
@@ -27,6 +27,7 @@ class RideShareEnv(Env):
         self.current_time_step = 0
         self.max_time_steps = max_time_steps
         self.observation_space = self._get_observation_space()
+        self.coordinator = AICoordinator(self)
 
     def add_agent(self, agent: TaxiAgent):
         """
@@ -34,10 +35,10 @@ class RideShareEnv(Env):
         - Add a new agent to the environment.
         - Uses agent's position to assign closest node on graph
         """
-        closest_node = ox.distance.nearest_nodes(
-            self.map_network, agent.position["longitude"], agent.position["latitude"]
-        )
-        agent.position = closest_node
+        # closest_node = ox.distance.nearest_nodes(
+        #     self.map_network, agent.position["longitude"], agent.position["latitude"]
+        # )
+        # agent.position = closest_node #TODO: Understand when to use node_id and when to use geolocation
         self.taxi_agents.append(agent)
 
     def _is_done(self):
@@ -120,9 +121,10 @@ class RideShareEnv(Env):
         num_passengers = len(self.passengers)
 
         agent_positions = np.zeros((self.observation_space["agent_positions"].shape))
-        agent_positions[:num_agents] = np.array(
-            [(agent.position) for agent in self.taxi_agents]
-        )
+        for i, agent in enumerate(self.taxi_agents):
+            agent_positions[i] = np.array(
+                [agent.position["longitude"], agent.position["latitude"]]
+            )
 
         passenger_positions = np.zeros(
             (self.observation_space["passenger_positions"].shape)
@@ -167,12 +169,18 @@ class RideShareEnv(Env):
         - Uses passenger's position to assign closest node on graph
         """
         # TODO: Check that passenger destination is not equal to pickup location
-        closest_node = ox.distance.nearest_nodes(
+        closest_node_pickup = ox.distance.nearest_nodes(
             self.map_network,
             passenger.pickup_location["longitude"],
             passenger.pickup_location["latitude"],
         )
-        passenger.position = closest_node
+        passenger.position["node"] = closest_node_pickup
+        closest_node_destination = ox.distance.nearest_nodes(
+            self.map_network,
+            passenger.destination["longitude"],
+            passenger.destination["latitude"],
+        )
+        passenger.destination["node"] = closest_node_destination
         self.passengers.append(passenger)
 
     def remove_passenger(self, passenger: Passenger):
@@ -182,22 +190,24 @@ class RideShareEnv(Env):
 
         self.passengers.remove(passenger)
 
-    def reset(self):
+    def reset(self, map_area="Piedmont, California, USA"):
         """
         Reset the environment to its initial state.
         - Reset agent positions, fuel levels, etc.
         - Generate new passengers with pickup and dropoff locations
         - Return the initial observation
         """
-        # Reset taxi agents
-        self.taxi_agents = []
-        # Reset passengers
-        self.passengers = []
-        # Create the initial observation
-        # observation = self._get_observation() #TODO: Why does reset need to get observation?
-        # return observation
 
-    def step(self, timestep):
+        self.map_network = ox.graph_from_place(map_area, network_type="drive")
+        self.taxi_agents = []
+        self.passengers = []
+        self.action_space = self._get_action_space()
+        self.map_bounds = self.get_map_bounds()
+        self.action_to_node_mapping = self._create_action_to_node_mapping()
+        self.current_time_step = 0
+        self.observation_space = self._get_observation_space()
+
+    def step(self, timestep=0.5):
         """
         Perform one time step in the environment
         - Update agent positions based on their actions
@@ -210,12 +220,16 @@ class RideShareEnv(Env):
         # Check for passenger pickup and drop-off events
         for taxi in self.taxi_agents:
             for passenger in self.passengers:
-                if taxi.position == passenger.position and not passenger.is_picked_up():
+                if (
+                    taxi.position["node"] == passenger.position["node"]
+                    and not passenger.is_picked_up()
+                ):
                     # Passenger pickup event
                     taxi.action_pickup(passenger)
                     passenger.set_picked_up(True)
                 elif (
-                    taxi.position == passenger.destination and passenger.is_picked_up()
+                    taxi.position["node"] == passenger.destination["node"]
+                    and passenger.is_picked_up()
                 ):
                     # Passenger drop-off event
                     taxi.action_dropoff(passenger)
@@ -225,7 +239,7 @@ class RideShareEnv(Env):
         next_observation = self._get_observation()
 
         # Call the AICoordinator to get the actions for the taxi agents
-        actions = self.coordinator.get_actions(next_observation)
+        actions = self.coordinator.get_action(next_observation)
 
         # Assign destinations to taxi agents based on the actions
         for taxi, action in zip(self.taxi_agents, actions):
@@ -294,13 +308,13 @@ class RideShareEnv(Env):
 
         # Plot taxi_agents on the map
         for taxi in self.taxi_agents:
-            node = self.map_network.nodes[taxi.position]
+            node = self.map_network.nodes[taxi.position["node"]]
             x, y = node["x"], node["y"]
             ax.scatter(x, y, color="blue", marker="o", s=50, label="Agent")
 
         # Plot passengers on the map
         for passenger in self.passengers:
-            node = self.map_network.nodes[passenger.position]
+            node = self.map_network.nodes[passenger.position["node"]]
             x, y = node["x"], node["y"]
             ax.scatter(x, y, color="green", marker="o", s=50, label="Passenger")
 

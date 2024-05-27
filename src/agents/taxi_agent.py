@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
 
+import osmnx as ox
+
 
 class TaxiAgent:
     def __init__(self, env, carInfo):
@@ -12,9 +14,18 @@ class TaxiAgent:
         self.name = carInfo["name"]
         self.description = carInfo["description"]
         self.vin = carInfo["vin"]
+        closest_node = ox.distance.nearest_nodes(
+            env.map_network,
+            carInfo["position"]["longitude"],
+            carInfo["position"]["latitude"],
+        )
+        # How to handle osm nodes and gps coords:
+        #    ML model uses gps coords as observation and output destination. (Convert node to gps if needed)
+        #   Convert to node using nearest node for position and osm navigation
         self.position = {
             "longitude": carInfo["position"]["longitude"],
             "latitude": carInfo["position"]["latitude"],
+            "node": closest_node,
         }
         self.mileage_km = carInfo.get(
             "mileage_km", 0.1
@@ -40,35 +51,35 @@ class TaxiAgent:
         """
         self.destination = destination
 
-    def get_observation(self):
-        """
-        Get the current observation for the agent based on the environment state.
-        - Observation could include agent's position, nearby agents, traffic conditions, etc.
-        """
-        # Get the agent's current position (node) in the environment
-        current_position = self.env.get_agent_position(self)
+    # def get_observation(self):
+    #     """
+    #     Get the current observation for the agent based on the environment state.
+    #     - Observation could include agent's position, nearby agents, traffic conditions, etc.
+    #     """
+    #     # Get the agent's current position (node) in the environment
+    #     current_position = self.env.get_agent_position(self)
 
-        # Get nearby agents within a certain radius
-        nearby_agents = self.env.get_nearby_agents(
-            self, radius=1.0
-        )  # Adjust the radius as needed
+    #     # Get nearby agents within a certain radius
+    #     nearby_agents = self.env.get_nearby_agents(
+    #         self, radius=1.0
+    #     )  # Adjust the radius as needed
 
-        # Create the observation dictionary
-        observation = {
-            "position": current_position,
-            "nearby_agents": nearby_agents,
-        }
+    #     # Create the observation dictionary
+    #     observation = {
+    #         "position": current_position,
+    #         "nearby_agents": nearby_agents,
+    #     }
 
-        return observation
+    #     return observation
 
-    def get_action(self, observation):
-        """
-        Get the action for the agent based on its current observation (to be learned by the RL algorithm).
-        - Action could be moving to an adjacent node, staying put, etc.
-        """
-        # Make a function for each action. This get_action function will choose from possible actions
+    # def get_action(self, observation):
+    #     """
+    #     Get the action for the agent based on its current observation (to be learned by the RL algorithm).
+    #     - Action could be moving to an adjacent node, staying put, etc.
+    #     """
+    #     # Make a function for each action. This get_action function will choose from possible actions
 
-        pass
+    #     pass
 
     def action_move(self, timestep=0.5):
         """
@@ -80,11 +91,11 @@ class TaxiAgent:
         average_speed = 30  # km/h #TODO use speed limit of road as speed
         distance_per_step = average_speed * timestep
 
-        if len(self.destination) > 0:
-            destination = self.destination[0]  # Get the first destination in the list
+        if self.destination:
+            destination = self.destination  # Get the first destination in the list
 
             # Get the shortest path from the agent's current position to the destination
-            path = self.env.get_route(self.position, destination)
+            path = self.env.get_route(self.position["node"], destination)
             self.path = path
             # Calculate the total distance of the path
             total_distance = self.env.get_path_distance(path)
@@ -95,11 +106,10 @@ class TaxiAgent:
                 self.position = destination
                 self.distance_from_node = 0  # Agent is at the destination node
                 self.update_agent_position(destination)
-                self.destination.pop(0)  # Remove the reached destination from the list
             else:
                 # Agent cannot reach the destination in this time step
                 # Move the agent along the path, to next node, based on the distance per step
-                current_node = self.position  # same as path[0]
+                current_node = self.position["node"]  # same as path[0]
                 next_node = path[1]
                 edge_data = self.env.map_network.get_edge_data(current_node, next_node)
                 edge_distance = edge_data[0]["length"]
@@ -117,8 +127,10 @@ class TaxiAgent:
             # If no destination is set, the agent stays still
             pass
 
-    def update_agent_position(self, position, distance_from_node=0):
-        self.position = position
+    def update_agent_position(self, node, distance_from_node=0):
+        self.position["node"] = node
+        self.position["longitude"] = self.env.map_network.nodes[node]["x"]
+        self.position["latitude"] = self.env.map_network.nodes[node]["y"]
         self.distance_from_node = distance_from_node
 
     def action_pickup(self, passenger):
