@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from typing import Any, Dict
 
 import networkx as nx
+import numpy as np
 import osmnx as ox
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -101,6 +102,72 @@ async def predict(graph_data: Dict[str, Any]):
         num_nodes = graph.number_of_nodes()
         num_edges = graph.number_of_edges()
         return {"num_nodes": num_nodes, "num_edges": num_edges}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/ai-api/find-destinations")
+async def find_destinations(data: Dict[str, Any]):
+    """
+    Find destinations for agents and passengers.
+
+    Args:
+        data (Dict[str, Any]): A dictionary containing the following keys:
+            - num_agents (int): The number of agents.
+            - num_passengers (int): The number of passengers.
+            - agent_positions (List[List[float]]): The positions of the agents.
+            - passenger_positions (List[List[float]]): The positions of the passengers.
+            - passenger_destinations (List[List[float]]): The destinations of the passengers.
+
+    Returns:
+        Example:
+            [
+                {
+                    "position": {
+                        "node_id": 11543660372,
+                        "longitude": 0.15496014168933958,
+                        "latitude": 0.9391560276780935
+                    }
+                },
+                ...
+            ]
+
+    Raises:
+        HTTPException: If an error occurs while processing the data.
+
+    Example:
+        data = {
+            "num_agents": 2,
+            "num_passengers": 2,
+            "agent_positions": [[37.824454, -122.231589], [37.821592, -122.234797]],
+            "passenger_positions": [[37.824454, -122.231589], [37.821592, -122.234797]],
+            "passenger_destinations": [[37.824454, -122.231589], [37.821592, -122.234797]],
+        }
+
+    The function takes a dictionary `data` as input, which contains information about the number of agents, passengers, their positions, and destinations. It then processes the data and returns a list of actions for the agents. If an error occurs during the processing, an HTTPException with a status code of 400 and the error message is raised.
+    """
+    try:
+        global G
+        print("data", data)
+        print("type of data", type(data))
+        # numpy array with size of (10, 2)
+        actions = np.random.rand(10, 2)  # TODO replace with actual coordinator call
+        print("actions", actions)
+        # take first data.num_agents from array
+        agents_actions = actions[: data["num_agents"]]
+        agents_actions_list = agents_actions.tolist()
+        # Convert list of actions to the specified format
+        result = [
+            {
+                "position": {
+                    "node_id": osm.find_closest_node(G, action[0], action[1]),
+                    "longitude": action[0],
+                    "latitude": action[1],
+                }
+            }
+            for i, action in enumerate(agents_actions_list)
+        ]
+        return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
