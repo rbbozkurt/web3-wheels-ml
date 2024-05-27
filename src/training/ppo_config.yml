@@ -15,9 +15,9 @@ max_passengers: 20
 passenger_spawn_probability: 0.1
 
 # Training parameters
-num_episodes: 10
+num_episodes: 1
 batch_size: 64
-replay_buffer_capacity: 10000
+replay_buffer_capacity: 1000
 
 # Hyperparameters for the DdpgAgent
 actor_learning_rate: 0.0001

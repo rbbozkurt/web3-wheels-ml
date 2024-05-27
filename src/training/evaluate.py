@@ -1,15 +1,22 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
 
+import os
 import random
+import sys
 
 import yaml
 
-from agents import AICoordinator, Passenger, TaxiAgent
-from envs import RideShareEnv
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.append(project_root)
+
+from src.agents.coordinator_agent import AICoordinator
+from src.agents.passenger import Passenger
+from src.agents.taxi_agent import TaxiAgent
+from src.envs.osm_env import RideShareEnv
 
 # Load evaluation parameters from ppo_config.yml file
-with open("ppo_config.yml", "r") as f:
+with open("src/training/ppo_config.yml", "r") as f:
     config = yaml.safe_load(f)
 
 
@@ -20,7 +27,7 @@ def evaluate(coordinator, num_episodes):
         # Pick a city randomly from the list of cities for evaluation
         city = random.choice(config["cities"])
         env = RideShareEnv(city)
-        state = env.reset()
+        env.coordinator = coordinator
         done = False
         episode_reward = 0
 
@@ -34,8 +41,8 @@ def evaluate(coordinator, num_episodes):
                 "mileage_km": random.randint(1000, 10000),
                 "tankCapacity": random.randint(40, 60),
                 "position": {
-                    "latitude": random.uniform(env.map_bounds[0], env.map_bounds[2]),
-                    "longitude": random.uniform(env.map_bounds[1], env.map_bounds[3]),
+                    "latitude": random.uniform(env.map_bounds[1], env.map_bounds[3]),
+                    "longitude": random.uniform(env.map_bounds[0], env.map_bounds[2]),
                 },
             }
             taxi_agent = TaxiAgent(env, taxi_info)
@@ -49,28 +56,26 @@ def evaluate(coordinator, num_episodes):
                         "passenger_id": len(env.passengers) + 1,
                         "pickup_location": {
                             "latitude": random.uniform(
-                                env.map_bounds[0], env.map_bounds[2]
+                                env.map_bounds[1], env.map_bounds[3]
                             ),
                             "longitude": random.uniform(
-                                env.map_bounds[1], env.map_bounds[3]
+                                env.map_bounds[0], env.map_bounds[2]
                             ),
                         },
-                        "dropoff_location": {
+                        "destination": {
                             "latitude": random.uniform(
-                                env.map_bounds[0], env.map_bounds[2]
+                                env.map_bounds[1], env.map_bounds[3]
                             ),
                             "longitude": random.uniform(
-                                env.map_bounds[1], env.map_bounds[3]
+                                env.map_bounds[0], env.map_bounds[2]
                             ),
                         },
                     }
                     passenger = Passenger(**passenger_info)
                     env.add_passenger(passenger)
 
-            action = coordinator.get_action(state)
-            next_state, reward, done, _ = env.step(action)
-            state = next_state
-            episode_reward += reward
+            next_observation, actions, rewards, done, _ = env.step(time_interval=2)
+            episode_reward += sum(rewards)
 
         total_reward += episode_reward
         print(f"Episode {episode+1}: Reward = {episode_reward}")
@@ -81,8 +86,10 @@ def evaluate(coordinator, num_episodes):
 
 if __name__ == "__main__":
     # Load the trained coordinator
-    trained_coordinator = AICoordinator(RideShareEnv())
-    # Load the trained weights into the coordinator
+    trained_coordinator = AICoordinator(RideShareEnv(), config)
+    trained_coordinator.model = trained_coordinator.model.load(
+        "src/training/saved_models/trained_coordinator"
+    )
 
     num_episodes = config["eval_num_episodes"]
     evaluate(trained_coordinator, num_episodes)

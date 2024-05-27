@@ -348,15 +348,19 @@ class RideShareEnv(Env):
         for taxi in self.taxi_agents:
             node = self.map_network.nodes[taxi.position["node"]]
             x, y = node["x"], node["y"]
-            ax.scatter(x, y, color="blue", marker="o", s=50, label="Agent")
+            if taxi.passengers:  # If the taxi has a passenger, plot it in red
+                ax.scatter(x, y, color="red", marker="o", s=50, label="TaxiAgent")
+            else:  # Otherwise, plot it in blue
+                ax.scatter(x, y, color="blue", marker="o", s=50, label="TaxiAgent")
 
         # Plot passengers on the map
         for passenger in self.passengers:
-            node = self.map_network.nodes[passenger.position["node"]]
-            x, y = node["x"], node["y"]
-            ax.scatter(x, y, color="green", marker="o", s=50, label="Passenger")
+            if not passenger.picked_up:
+                node = self.map_network.nodes[passenger.position["node"]]
+                x, y = node["x"], node["y"]
+                ax.scatter(x, y, color="green", marker="o", s=50, label="Passenger")
 
-        ax.legend()
+        # ax.legend()
 
         if output_file is not None:
             # Save the plot to the specified output file
