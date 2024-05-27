@@ -39,17 +39,17 @@ class TaxiAgent:
         self.distance_from_node = 0  # distance to closest node when between nodes
         self.passengers = []  # list of passengers in car
 
-        self.destination = []  # Destination of Agent at any given time
+        self.destination = []  # Destination of Agent NODE ID
         self.path = []  # Path of Agent at any given time
         self.env = env  # Environment in which the agent is operating
 
-    def set_destination(self, destination):
+    def set_destination(self, node):
         """
         Set the destination for the agent.
         This can be used to set the passenger pickup destination, drop off destination,
         or some other destination by a central planning agent.
         """
-        self.destination = destination
+        self.destination = node
 
     # def get_observation(self):
     #     """
@@ -94,16 +94,31 @@ class TaxiAgent:
         if self.destination:
             destination = self.destination  # Get the first destination in the list
 
+            if self.position["node"] == destination:
+                # If the current position is the same as the destination, no movement is needed
+                print("Already at the destination")
+                self.destination = None  # Reset the destination
+                return
+
             # Get the shortest path from the agent's current position to the destination
             path = self.env.get_route(self.position["node"], destination)
-            self.path = path
+            if path is None:
+                # Handle the case when no route is found
+                print("No route found")
+                self.destination = None  # Reset the destination
+                return
+            else:
+                # Process the route
+                distance = self.env.get_path_distance(path)
+                print(f"Route found with distance {distance}")
+                self.path = path
             # Calculate the total distance of the path
             total_distance = self.env.get_path_distance(path)
 
             # Check if the agent can reach the destination within the current time step
             if total_distance <= distance_per_step:
                 # Agent can reach the destination in this time step
-                self.position = destination
+                self.position["node"] = destination
                 self.distance_from_node = 0  # Agent is at the destination node
                 self.update_agent_position(destination)
             else:
@@ -139,10 +154,10 @@ class TaxiAgent:
         If so, passenger is picked up and added to
         agent's list of passengers
         """
-        if self.position == passenger.position:
+        if self.position["node"] == passenger.position["node"]:
             # Add the passenger to the agent's list of passengers
             self.passengers.append(passenger)
-        self.set_destination(passenger.destination)
+        self.set_destination(passenger.destination["node"])
         passenger.set_picked_up(True)
 
     def action_dropoff(self, passenger):

@@ -3,20 +3,46 @@
 import gymnasium as gym
 import numpy as np
 from stable_baselines3 import SAC
+from stable_baselines3.common.logger import configure
 from stable_baselines3.common.type_aliases import GymObs, GymStepReturn
 
 
 class AICoordinator(gym.Env):
-    def __init__(self, env, max_agents=10, max_passengers=20):
+    def __init__(self, env, config):
         super().__init__()
         self.env = env
-        self.max_agents = max_agents
-        self.max_passengers = max_passengers
+        self.max_agents = config["max_taxis"]
+        self.max_passengers = config["max_passengers"]
 
         self.observation_space = self._get_observation_space()
         self.action_space = self._get_action_space()
 
-        self.model = SAC("MultiInputPolicy", self, verbose=1)
+        # Configure the logger
+        self.logger = configure(
+            folder="src/training/logger",
+            format_strings=["stdout", "log", "csv", "tensorboard"],
+        )
+
+        # Initialize the SAC model with the logger and configuration parameters
+        self.model = SAC(
+            "MultiInputPolicy",
+            self,
+            verbose=1,
+            tensorboard_log=self.logger.get_dir(),
+            learning_rate=config["actor_learning_rate"],
+            gamma=config["gamma"],
+            tau=config["tau"],
+            train_freq=(config["train_every_n_steps"], "step"),
+            gradient_steps=config["train_iterations"],
+            policy_kwargs={
+                "net_arch": {
+                    "pi": config["actor_hidden_layers"],
+                    "qf": config["critic_hidden_layers"],
+                },
+            },
+        )
+        self.model._logger = self.logger
+        self.model._custom_logger = True
 
     def _get_observation_space(self):
         return gym.spaces.Dict(
@@ -55,8 +81,9 @@ class AICoordinator(gym.Env):
     def step(self, action: np.ndarray) -> GymStepReturn:
         return self.env.step(action)
 
-    def train(self, total_timesteps):
-        self.model.learn(total_timesteps=total_timesteps)
+    def train(self, experiences):
+        states, actions, rewards, next_states, dones = experiences
+        self.model.train(0, [states, actions, rewards, next_states, dones])
 
     def get_action(self, observation):
         return self.model.predict(observation, deterministic=True)[0]

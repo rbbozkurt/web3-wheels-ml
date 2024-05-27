@@ -27,7 +27,7 @@ class RideShareEnv(Env):
         self.current_time_step = 0
         self.max_time_steps = max_time_steps
         self.observation_space = self._get_observation_space()
-        self.coordinator = AICoordinator(self)
+        self.coordinator = []
 
     def add_agent(self, agent: TaxiAgent):
         """
@@ -117,6 +117,7 @@ class RideShareEnv(Env):
         return action_to_node_mapping
 
     def _get_observation(self):
+        # TODO: Only include taxi_agents without destinations and passengers not picked up
         num_agents = len(self.taxi_agents)
         num_passengers = len(self.passengers)
 
@@ -207,7 +208,7 @@ class RideShareEnv(Env):
         self.current_time_step = 0
         self.observation_space = self._get_observation_space()
 
-    def step(self, timestep=0.5):
+    def step(self, time_interval=0.5):
         """
         Perform one time step in the environment
         - Update agent positions based on their actions
@@ -215,7 +216,7 @@ class RideShareEnv(Env):
         - Calculate and return rewards, next observations, done flags, and info
         """
         for taxi in self.taxi_agents:
-            taxi.action_move(timestep)
+            taxi.action_move(time_interval)
 
         # Check for passenger pickup and drop-off events
         for taxi in self.taxi_agents:
@@ -254,13 +255,18 @@ class RideShareEnv(Env):
                 if distance < min_distance:
                     min_distance = distance
                     closest_node_id = node_id
-            taxi.set_destination(closest_node_id)
+            destination = {
+                "node": closest_node_id,
+                "longitude": self.map_network.nodes[closest_node_id]["x"],
+                "latitude": self.map_network.nodes[closest_node_id]["y"],
+            }
+            taxi.set_destination(destination["node"])
         # Calculate rewards based on passenger waiting time and ride completion
         rewards = reward_function_basic(self)
 
         # Check if the episode is done
         done = self._is_done()
-
+        self.current_time_step += 1
         # Provide additional information if needed
         info = {}
 
@@ -272,15 +278,24 @@ class RideShareEnv(Env):
         - Uses networkx to find shortest path
         - Can be modified to include traffic data
         """
-        return nx.shortest_path(self.map_network, start_node, end_node)
+        try:
+            route = nx.shortest_path(self.map_network, start_node, end_node)
+            return route
+        except nx.NetworkXNoPath:
+            # No path exists between the start and end nodes
+            return None
 
     def get_path_distance(self, path):
         """
         Gets the total distance of path
         """
-        edge_lengths = ox.routing.route_to_gdf(self.map_network, path)["length"]
-        total_distance = round(sum(edge_lengths))
-        return total_distance
+        if len(path) == 1:
+            # If the path consists of a single node, the distance is 0
+            return 0
+        else:
+            edge_lengths = ox.routing.route_to_gdf(self.map_network, path)["length"]
+            total_distance = round(sum(edge_lengths))
+            return total_distance
 
     def render(
         self, mode="human", ax=None, route=None, output_file="test_environment.png"

@@ -8,29 +8,34 @@ import sys
 import yaml
 from memory import ReplayBuffer
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.append(project_root)
 
-from agents.coordinator_agent import AICoordinator
-from agents.passenger import Passenger
-from agents.taxi_agent import TaxiAgent
-from envs.osm_env import RideShareEnv
+import numpy as np
+
+from src.agents.coordinator_agent import AICoordinator
+from src.agents.passenger import Passenger
+from src.agents.taxi_agent import TaxiAgent
+from src.envs.osm_env import RideShareEnv
 
 # Load training parameters from ppo_config.yml file
-with open("ppo_config.yml", "r") as f:
+with open("src/training/ppo_config.yml", "r") as f:
     config = yaml.safe_load(f)
 
 
 def train(num_episodes, batch_size, replay_buffer_capacity):
     env = RideShareEnv()
     coordinator = AICoordinator(
-        env, max_agents=config["max_taxis"], max_passengers=config["max_passengers"]
+        env,
+        config,
     )
+    env.coordinator = coordinator
     replay_buffer = ReplayBuffer(replay_buffer_capacity)
 
     for episode in range(num_episodes):
         # Pick a city randomly from the list of cities for training
         city = random.choice(config["cities"])
-        state = env.reset(city)
+        env.reset(city)
         done = False
         episode_reward = 0
 
@@ -65,7 +70,7 @@ def train(num_episodes, batch_size, replay_buffer_capacity):
                                 env.map_bounds[0], env.map_bounds[2]
                             ),
                         },
-                        "dropoff_location": {
+                        "destination": {
                             "latitude": random.uniform(
                                 env.map_bounds[1], env.map_bounds[3]
                             ),
@@ -76,12 +81,13 @@ def train(num_episodes, batch_size, replay_buffer_capacity):
                     }
                     passenger = Passenger(**passenger_info)
                     env.add_passenger(passenger)
-
-            action = coordinator.get_action(state)
-            next_state, reward, done, _ = env.step(action)
-            replay_buffer.push(state, action, reward, next_state, done)
-            state = next_state
-            episode_reward += reward
+            observation = env._get_observation()
+            next_observation, actions, rewards, done, _ = env.step(time_interval=0.5)
+            replay_buffer.push(
+                observation, actions, np.sum(rewards), next_observation, done
+            )
+            observation = next_observation
+            episode_reward += np.sum(rewards)
 
             if len(replay_buffer) >= batch_size:
                 experiences = replay_buffer.sample(batch_size)

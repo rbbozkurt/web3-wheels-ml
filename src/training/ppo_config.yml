@@ -4,9 +4,6 @@
 # List of cities for training
 cities:
   - "Piedmont, California, USA"
-  - "Oakland, California, USA"
-  - "Berkeley, California, USA"
-  - "San Francisco, California, USA"
 
 # Maximum number of taxis in the environment
 max_taxis: 10

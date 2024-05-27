@@ -18,6 +18,7 @@ def reward_function_basic(env):
         if not passenger.is_picked_up():
             # Negative reward for each time step passenger is waiting
             reward = -1
+
             if passenger.is_picked_up():
                 # Positive reward for passenger pickup
                 reward += 10
