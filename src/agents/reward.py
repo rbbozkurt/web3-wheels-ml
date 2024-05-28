@@ -56,7 +56,7 @@ def reward_function_2(env):
         if taxi.passengers:
             for passenger in taxi.passengers:
                 if passenger.is_picked_up() and not passenger.is_completed():
-                    reward += 10  # Reward for passenger pickup
+                    reward += 50  # Reward for passenger pickup
                 elif passenger.is_completed():
                     reward += 50  # Reward for successful ride completion
 
@@ -71,7 +71,7 @@ def reward_function_2(env):
         if not passenger.is_picked_up():
             # Negative reward for each time step passenger is waiting
             passenger.update_waiting_time()
-            reward = -5  # -0.1 * passenger.waiting_time - 5
-            rewards.append(reward)
+            reward -= -5  # -0.1 * passenger.waiting_time - 5
+        rewards.append(reward)
 
     return rewards

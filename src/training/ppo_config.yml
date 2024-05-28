@@ -48,4 +48,4 @@ log_every_n_episodes: 10
 checkpoint_every_n_episodes: 100
 
 # Evaluation
-eval_num_episodes: 5
+eval_num_episodes: 3
