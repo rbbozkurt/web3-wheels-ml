@@ -66,7 +66,7 @@ class TaxiAgent:
 
             if self.position["node"] == destination:
                 # If the current position is the same as the destination, no movement is needed
-                print("Already at the destination")
+                # print("Already at the destination")
                 self.destination = None  # Reset the destination
                 return
 
@@ -74,7 +74,7 @@ class TaxiAgent:
             path = self.env.get_route(self.position["node"], destination)
             if path is None:
                 # Handle the case when no route is found
-                print("No route found")
+                # print("No route found")
                 self.destination = None  # Reset the destination
                 return
             else:

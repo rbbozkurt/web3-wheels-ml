@@ -4,6 +4,7 @@
 import os
 import random
 import sys
+from datetime import datetime
 
 import yaml
 
@@ -97,9 +98,12 @@ def evaluate(coordinator, num_episodes):
 
         # Create the animation
         ani = animation.FuncAnimation(fig, update, frames=100, interval=500)
-
-        # Save the animation as a GIF
-        ani.save(f"episode_{episode+1}.gif", writer="pillow")
+        now = datetime.now()
+        folder_name = now.strftime("%Y-%m-%d_%H-%M-%S")
+        if not os.path.exists(f"results/{folder_name}"):
+            os.makedirs(f"results/{folder_name}")
+        # Save the file to the new folder
+        ani.save(f"results/{folder_name}/episode_{episode+1}.gif", writer="pillow")
 
         # Close the figure
         plt.close(fig)

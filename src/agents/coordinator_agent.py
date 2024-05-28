@@ -84,6 +84,10 @@ class AICoordinator(gym.Env):
     def train(self, experiences):
         states, actions, rewards, next_states, dones = experiences
         self.model.train(0, [states, actions, rewards, next_states, dones])
+        # Log relevant data
+        self.logger.record("train/reward", np.mean(rewards))
+        self.logger.record("train/episode_length", len(rewards))
+        self.logger.dump()
 
     def get_action(self, observation):
         return self.model.predict(observation, deterministic=True)[0]
