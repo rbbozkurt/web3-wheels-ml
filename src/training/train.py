@@ -24,7 +24,9 @@ with open("src/training/ppo_config.yml", "r") as f:
 
 
 def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
-    env = RideShareEnv()
+    city = random.choice(config["cities"])
+    max_time_steps = config["max_time_steps"]
+    env = RideShareEnv(city, max_time_steps)
     coordinator = AICoordinator(
         env,
         config,
@@ -82,7 +84,7 @@ def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
                     passenger = Passenger(**passenger_info)
                     env.add_passenger(passenger)
             observation = env._get_observation()
-            next_observation, actions, rewards, done, _ = env.step(time_interval=2)
+            next_observation, actions, rewards, done, _ = env.step(time_interval=3)
 
             if actions is not None:
                 replay_buffer.push(
@@ -107,7 +109,7 @@ if __name__ == "__main__":
     replay_buffer_capacity = config["replay_buffer_capacity"]
 
     trained_coordinator = train(
-        num_episodes, batch_size, replay_buffer_capacity, num_training_steps=1
+        num_episodes, batch_size, replay_buffer_capacity, num_training_steps=3
     )
     # Save the trained coordinator if needed
     trained_coordinator.model.save("src/training/saved_models/trained_coordinator")

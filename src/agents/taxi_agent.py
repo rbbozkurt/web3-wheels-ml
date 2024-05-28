@@ -51,36 +51,6 @@ class TaxiAgent:
         """
         self.destination = node
 
-    # def get_observation(self):
-    #     """
-    #     Get the current observation for the agent based on the environment state.
-    #     - Observation could include agent's position, nearby agents, traffic conditions, etc.
-    #     """
-    #     # Get the agent's current position (node) in the environment
-    #     current_position = self.env.get_agent_position(self)
-
-    #     # Get nearby agents within a certain radius
-    #     nearby_agents = self.env.get_nearby_agents(
-    #         self, radius=1.0
-    #     )  # Adjust the radius as needed
-
-    #     # Create the observation dictionary
-    #     observation = {
-    #         "position": current_position,
-    #         "nearby_agents": nearby_agents,
-    #     }
-
-    #     return observation
-
-    # def get_action(self, observation):
-    #     """
-    #     Get the action for the agent based on its current observation (to be learned by the RL algorithm).
-    #     - Action could be moving to an adjacent node, staying put, etc.
-    #     """
-    #     # Make a function for each action. This get_action function will choose from possible actions
-
-    #     pass
-
     def action_move(self, timestep=0.5):
         """
         Moves agent towards the destination based on the agent's speed and the time step.

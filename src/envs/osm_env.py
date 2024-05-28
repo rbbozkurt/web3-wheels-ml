@@ -17,7 +17,7 @@ from ..agents import (
 
 
 class RideShareEnv(Env):
-    def __init__(self, map_area="Piedmont, California, USA", max_time_steps=99):
+    def __init__(self, map_area="Piedmont, California, USA", max_time_steps=500):
         """
         Initialize the ride-sharing environment.
         - Download the street network data using OSMnx
@@ -126,14 +126,14 @@ class RideShareEnv(Env):
         num_agents = len(self.taxi_agents)
         num_passengers = len(self.passengers)
 
-        # Filter taxi agents without destinations
-        taxi_agents_without_dest = [
-            agent for agent in self.taxi_agents if not agent.destination
+        # Filter taxi agents without passengers
+        taxi_agents_without_passengers = [
+            agent for agent in self.taxi_agents if not agent.passengers
         ]
-        num_agents_without_dest = len(taxi_agents_without_dest)
+        num_agents_without_passengers = len(taxi_agents_without_passengers)
 
         agent_positions = np.zeros((self.observation_space["agent_positions"].shape))
-        for i, agent in enumerate(taxi_agents_without_dest):
+        for i, agent in enumerate(taxi_agents_without_passengers):
             agent_positions[i] = np.array(
                 [agent.position["longitude"], agent.position["latitude"]]
             )
@@ -166,8 +166,9 @@ class RideShareEnv(Env):
                 [destination["longitude"], destination["latitude"]]
             )
 
+        # Input observation to model. Do not change keys
         observation = {
-            "num_agents": np.array([num_agents_without_dest]),
+            "num_agents": np.array([num_agents_without_passengers]),
             "num_passengers": np.array([num_passengers_not_picked_up]),
             "agent_positions": agent_positions,
             "passenger_positions": passenger_positions,
@@ -255,13 +256,18 @@ class RideShareEnv(Env):
         # Get the next observation
         next_observation = self._get_observation()
 
-        # Check if any taxi does not have a destination
-        if any(not taxi.destination for taxi in self.taxi_agents):
+        # Filter taxi agents without passengers
+        taxi_agents_without_passengers = [
+            agent for agent in self.taxi_agents if not agent.passengers
+        ]
+
+        # Check if any taxi does not have passengers
+        if taxi_agents_without_passengers:
             # Call the AICoordinator to get the actions for the taxi agents
             actions = self.coordinator.get_action(next_observation)
 
             # Assign destinations to taxi agents based on the actions
-            for taxi, action in zip(self.taxi_agents, actions):
+            for taxi, action in zip(taxi_agents_without_passengers, actions):
                 # Find the closest node based on the continuous action value
                 closest_node_id = None
                 min_distance = float("inf")
@@ -288,7 +294,7 @@ class RideShareEnv(Env):
         # Check if the episode is done
         done = self._is_done()
         self.current_time_step += 1
-        print("Time step: ", self.current_time_step)
+        # print("Time step: ", self.current_time_step)
 
         # Provide additional information if needed
         info = {}
