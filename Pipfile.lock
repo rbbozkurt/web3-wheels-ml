@@ -2750,11 +2750,11 @@
     },
     "prompt-toolkit": {
       "hashes": [
-        "sha256:3527b7af26106cbc65a040bcc84839a3566ec1b051bb0bfe953631e704b0ff7d",
-        "sha256:a11a29cb3bf0a28a387fe5122cdb649816a957cd9261dcedf8c9f1fef33eacf6"
+        "sha256:07c60ee4ab7b7e90824b61afa840c8f5aad2d46b3e2e10acc33d8ecc94a49089",
+        "sha256:a29b89160e494e3ea8622b09fa5897610b437884dcdcd054fdc1308883326c2a"
       ],
       "markers": "python_full_version >= '3.7.0'",
-      "version": "==3.0.43"
+      "version": "==3.0.45"
     },
     "psutil": {
       "hashes": [

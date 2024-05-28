@@ -33,6 +33,11 @@ def get_random_nodes(graph, with_data=False):
     return random.choice(nodes)
 
 
+import heapq
+
+import networkx as nx
+
+
 def find_best_matches(G, vehicle_node_ids, destinations_node_id):
     """
     This function finds the best matches between vehicles and destinations.
@@ -41,11 +46,15 @@ def find_best_matches(G, vehicle_node_ids, destinations_node_id):
     for vehicle_node_id in vehicle_node_ids:
         distances = []
         for dest_node_id in destinations_node_id:
-            if nx.has_path(G, vehicle_node_id, dest_node_id):
-                distance = nx.shortest_path_length(G, vehicle_node_id, dest_node_id)
-                heapq.heappush(distances, (distance, dest_node_id))
-        best_match = heapq.heappop(distances)[1] if distances else None
-        best_matches.append((vehicle_node_id, best_match))
+            if vehicle_node_id in G and dest_node_id in G:
+                try:
+                    distance = nx.shortest_path_length(G, vehicle_node_id, dest_node_id)
+                    heapq.heappush(distances, (distance, dest_node_id))
+                except nx.NetworkXNoPath:
+                    continue
+        if distances:
+            best_match = heapq.heappop(distances)[1]
+            best_matches.append((vehicle_node_id, best_match))
     return best_matches
 
 
@@ -58,6 +67,13 @@ def find_routes(G, source_dest_pairs: []):
     for source, dest in source_dest_pairs:
         routes.append(nx.shortest_path(G, source, dest))
     return routes
+
+
+def find_route(G, source_node_id, target_node_id):
+    """
+    This function finds the best route between two nodes.
+    """
+    return nx.shortest_path(G, source_node_id, target_node_id)
 
 
 def find_distance(G, source_node_id, target_node_id):
