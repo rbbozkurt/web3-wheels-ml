@@ -70,7 +70,8 @@ def reward_function_2(env):
     for passenger in env.passengers:
         if not passenger.is_picked_up():
             # Negative reward for each time step passenger is waiting
-            reward = -1
+            passenger.update_waiting_time()
+            reward = -5  # -0.1 * passenger.waiting_time - 5
             rewards.append(reward)
 
     return rewards

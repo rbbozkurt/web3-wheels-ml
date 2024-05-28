@@ -243,7 +243,8 @@ class RideShareEnv(Env):
                     and not passenger.is_picked_up()
                 ):
                     # Passenger pickup event
-                    taxi.action_pickup(passenger)
+                    if not taxi.passengers:  # If the taxi does not have a passenger
+                        taxi.action_pickup(passenger)
 
                 elif (
                     taxi.position["node"] == passenger.destination["node"]
@@ -326,9 +327,7 @@ class RideShareEnv(Env):
             total_distance = round(sum(edge_lengths))
             return total_distance
 
-    def render(
-        self, mode="human", ax=None, route=None, output_file="test_environment.png"
-    ):
+    def render(self, mode="human", ax=None, output_file="test_environment.png"):
         """
         Render the current state of the environment.
         - Visualize the taxi_agents, ride requests, street network graph, and route (if provided)
@@ -346,10 +345,6 @@ class RideShareEnv(Env):
             ax=ax,
         )
 
-        # Plot the route (if provided)
-        if route is not None:
-            ox.plot_graph_route(self.map_network, route, node_size=0, ax=ax)
-
         # Plot taxi_agents on the map
         for taxi in self.taxi_agents:
             node = self.map_network.nodes[taxi.position["node"]]
@@ -358,6 +353,12 @@ class RideShareEnv(Env):
                 ax.scatter(x, y, color="red", marker="o", s=50, label="TaxiAgent")
             else:  # Otherwise, plot it in blue
                 ax.scatter(x, y, color="blue", marker="o", s=50, label="TaxiAgent")
+
+            # Plot the path for the taxi agent if it has a destination
+            if taxi.destination:
+                path = self.get_route(taxi.position["node"], taxi.destination)
+                if path:
+                    ox.plot_graph_route(self.map_network, path, node_size=0, ax=ax)
 
         # Plot passengers on the map
         for passenger in self.passengers:
