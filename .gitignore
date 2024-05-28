@@ -168,3 +168,4 @@ cache/*
 *mp4
 *.gif
 cache/*.json
+src/training/logger/*

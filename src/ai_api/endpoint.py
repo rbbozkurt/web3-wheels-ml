@@ -10,6 +10,8 @@ from fastapi import FastAPI, HTTPException
 from networkx.readwrite import json_graph
 from pydantic import BaseModel
 
+from envs import RideShareEnv
+
 # Initialize FastAPI app
 app = FastAPI()
 
@@ -25,6 +27,36 @@ def serialize_graph(graph: nx.MultiDiGraph) -> Dict[str, Any]:
 # Function to deserialize a dictionary to a graph
 def deserialize_graph(data: Dict[str, Any]) -> nx.MultiDiGraph:
     return nx.node_link_graph(data)
+
+
+# TODO: function to Initialize Agent and add to list
+
+"""
+usage: taxi = TaxiAgent(environment, carInfo)
+where carInfo is a dictionary with the following keys:
+        carInfo["name"]
+        carInfo["description"]
+        carInfo["vin"]
+        carInfo["position"]["longitude"],
+        carInfo["position"]["latitude"],
+
+        ## Other properties are OPTIONAL
+
+Then add to env: RideShareEnv.add_agent(taxi)
+"""
+# TODO: function to Initialize Passenger and add to list
+
+"""
+usage:
+    passenger = Passenger(
+        passenger_id=1,
+        pickup_location={"latitude": 37.824454, "longitude": -122.231589},
+        dropoff_location={"latitude": 37.821592, "longitude": -122.234797},
+    )
+
+
+Then add to env: RideShareEnv.add_passenger(passenger)
+"""
 
 
 @app.get("/")
@@ -75,3 +107,9 @@ if __name__ == "__main__":
 
     port = int(sys.argv[2])
     uvicorn.run(app, host="0.0.0.0", port=port)
+
+    env = RideShareEnv()
+
+    # Continuously update the environment
+    while True:
+        env.step()
