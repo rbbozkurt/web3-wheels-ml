@@ -16,8 +16,9 @@ from fastapi import FastAPI, HTTPException
 from networkx.readwrite import json_graph
 from pydantic import BaseModel
 
+
 import openstreetsmap_api as osm
-from envs import RideShareEnv
+
 
 # Initialize FastAPI app
 app = FastAPI()
