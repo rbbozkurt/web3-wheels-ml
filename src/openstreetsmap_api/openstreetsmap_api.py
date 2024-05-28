@@ -60,6 +60,13 @@ def find_routes(G, source_dest_pairs: []):
     return routes
 
 
+def find_distance(G, source_node_id, target_node_id):
+    """
+    This function calculates the price of the ride.
+    """
+    return nx.shortest_path_length(G, source_node_id, target_node_id)
+
+
 def draw_plain_map(G, pre_ax=None):
     """
     Draws a plain map without any nodes or routes.
@@ -213,6 +220,28 @@ def find_x_y_coordinates_of_node(G, node_id: int):
     """
     node = G.nodes[node_id]
     return node["x"], node["y"]
+
+
+def find_closest_node(G, x, y):
+    """
+    This function returns the closest node to the given x and y coordinates.
+
+    Parameters:
+    - G: networkx.MultiDiGraph
+        Input graph
+    - x: float
+        x coordinate
+    - y: float
+        y coordinate
+
+    Returns:
+    - node_id: int
+        ID of the closest node
+    """
+    print("x", x)
+    print("y", y)
+    print(type(x))
+    return ox.distance.nearest_nodes(G, x, y, return_dist=False)
 
 
 def find_x_y_coordinates_of_nodes(G, node_ids: list):
