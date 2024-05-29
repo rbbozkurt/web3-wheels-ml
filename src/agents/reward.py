@@ -39,7 +39,8 @@ def reward_function_2(env):
     - Rewards if the assigned taxi destination matches a passenger pickup position
     """
 
-    rewards = []
+    total_reward = 0
+
     for taxi in env.taxi_agents:
         reward = 0
 
@@ -50,7 +51,6 @@ def reward_function_2(env):
                 and taxi.destination == passenger.position["node"]
             ):
                 reward += 20  # Reward for assigning the correct destination
-                break
 
         # Check if the taxi has picked up a passenger
         if taxi.passengers:
@@ -64,14 +64,13 @@ def reward_function_2(env):
         if not taxi.destination and any(not p.is_picked_up() for p in env.passengers):
             reward -= 10  # Penalty for not having an assigned destination when passengers are waiting
 
-        rewards.append(reward)
+        total_reward += reward
 
     # Additional rewards/penalties based on passenger waiting time
     for passenger in env.passengers:
         if not passenger.is_picked_up():
             # Negative reward for each time step passenger is waiting
             passenger.update_waiting_time()
-            reward -= -5  # -0.1 * passenger.waiting_time - 5
-        rewards.append(reward)
+            total_reward -= -5  # -0.1 * passenger.waiting_time - 5
 
-    return rewards
+    return total_reward

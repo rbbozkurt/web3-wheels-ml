@@ -96,7 +96,7 @@ def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
                 replay_buffer.push(
                     observation, actions, np.sum(rewards), next_observation, done
                 )
-            episode_reward += np.sum(rewards)
+            episode_reward += rewards
 
         print(f"Episode {episode+1}: Reward = {episode_reward}")
 

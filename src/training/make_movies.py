@@ -90,7 +90,7 @@ def evaluate(coordinator, num_episodes):
             next_observation, actions, rewards, done, _ = env.step(
                 time_interval=config["time_interval"]
             )
-            episode_reward += sum(rewards)
+            episode_reward += rewards
 
             # Render the environment for the current frame
             env.render(ax=ax, output_file=None)
@@ -122,7 +122,8 @@ def evaluate(coordinator, num_episodes):
 
 if __name__ == "__main__":
     # Load the trained coordinator
-    trained_coordinator = AICoordinator(RideShareEnv(), config)
+    city = random.choice(config["cities"])
+    trained_coordinator = AICoordinator(RideShareEnv(config, city), config)
     trained_coordinator.model = trained_coordinator.model.load(
         "src/training/saved_models/trained_coordinator"
     )

@@ -348,17 +348,36 @@ class RideShareEnv(Env):
             node = self.map_network.nodes[taxi.position["node"]]
             x, y = node["x"], node["y"]
             if taxi.passengers:  # If the taxi has a passenger, plot it in red
-                ax.scatter(x, y, color="red", marker="o", s=50, label="TaxiAgent")
+                ax.scatter(x, y, color="red", marker="o", s=30, label="TaxiAgent")
             else:  # Otherwise, plot it in blue
-                ax.scatter(x, y, color="blue", marker="o", s=50, label="TaxiAgent")
+                ax.scatter(x, y, color="blue", marker="o", s=30, label="TaxiAgent")
 
             # Plot the path for the taxi agent if it has a destination
             if taxi.destination:
                 path = self.get_route(taxi.position["node"], taxi.destination)
                 if path:
-                    ox.plot_graph_route(
-                        self.map_network, path, node_size=0, ax=ax, route_linewidth=2
-                    )
+                    if taxi.passengers:  # If the taxi has a passenger, plot it in red
+                        ox.plot_graph_route(
+                            self.map_network,
+                            path,
+                            node_size=0,
+                            ax=ax,
+                            route_linewidth=3,
+                            route_alpha=0.3,
+                            orig_dest_size=1,
+                            route_color="red",
+                        )
+                    else:
+                        ox.plot_graph_route(
+                            self.map_network,
+                            path,
+                            node_size=0,
+                            ax=ax,
+                            route_linewidth=3,
+                            route_alpha=0.3,
+                            orig_dest_size=1,
+                            route_color="blue",
+                        )
 
         # Plot passengers on the map
         for passenger in self.passengers:
