@@ -17,9 +17,7 @@ from fastapi import FastAPI, HTTPException
 from networkx.readwrite import json_graph
 from pydantic import BaseModel
 
-
 import openstreetsmap_api as osm
-
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -114,15 +112,18 @@ async def find_destinations(data: Dict[str, Any]):
     async with lock:
         try:
             global G
-            print("data", data)
-            print("type of data", type(data))
-            # numpy array with size of (10, 2)
+            print("Received data: ", data)
+            print("Type of received data: ", type(data))
+
             actions = np.random.rand(10, 2)  # TODO replace with actual coordinator call
-            print("actions", actions)
-            # take first data.num_agents from array
+            print("Generated actions: ", actions)
+
             agents_actions = actions[: data["num_agents"]]
+            print("Agent actions: ", agents_actions)
+
             agents_actions_list = agents_actions.tolist()
-            # Convert list of actions to the specified format
+            print("Agent actions list: ", agents_actions_list)
+
             result = [
                 {
                     "position": {
@@ -133,8 +134,10 @@ async def find_destinations(data: Dict[str, Any]):
                 }
                 for i, action in enumerate(agents_actions_list)
             ]
+            print("Result: ", result)
             return result
         except Exception as e:
+            print("An error occurred: ", str(e))
             raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -171,15 +174,23 @@ async def find_mock_destinations(data: Dict[str, Any]):
     """
     async with lock:
         try:
+            print("Received data: ", data)
+            print("Type of received data: ", type(data))
+
             global G
             matches = osm.find_best_matches(
                 G, data["vehicle_node_ids"], data["passenger_node_ids"]
             )
-            return [
+            print("Matches: ", matches)
+
+            result = [
                 {"vehicle_node_id": agent, "destination_node_id": match}
                 for agent, match in matches
             ]
+            print("Result: ", result)
+            return result
         except Exception as e:
+            print("An error occurred: ", str(e))
             raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -216,11 +227,20 @@ async def find_route(data: Dict[str, Any]):
 
     async with lock:
         try:
+            print("Received data for find-route: ", data)
+            print("Type of received data: ", type(data))
+
             shortest_path = osm.find_route(
                 G, data["source_node_id"], data["target_node_id"]
             )
-            return {"vehicle_id": data["vehicle_id"], "route": shortest_path}
+            print("Shortest path: ", shortest_path)
+
+            result = {"vehicle_id": data["vehicle_id"], "route": shortest_path}
+            print("Result: ", result)
+
+            return result
         except Exception as e:
+            print("An error occurred: ", str(e))
             raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -256,11 +276,15 @@ async def move_agent(agent: Dict[str, Any]):
     async with lock:
         try:
             global G
-            print("agent", agent)
+            print("Received agent data: ", agent)
+            print("Type of received agent data: ", type(agent))
+
             longitude, latitude = osm.find_x_y_coordinates_of_node(
                 G, agent["next_node_id"]
             )
-            return {
+            print("Longitude and Latitude: ", longitude, latitude)
+
+            result = {
                 "vehicle_id": agent["vehicle_id"],
                 "position": {
                     "node_id": agent["next_node_id"],
@@ -268,7 +292,11 @@ async def move_agent(agent: Dict[str, Any]):
                     "latitude": latitude,
                 },
             }
+            print("Result: ", result)
+
+            return result
         except Exception as e:
+            print("An error occurred: ", str(e))
             raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -307,13 +335,18 @@ async def find_closest_node(data: VehicleData):
     async with lock:
         try:
             global G
-            print("vehicle", data)
+            print("Received vehicle data: ", data)
+            print("Type of received vehicle data: ", type(data))
+
             closest_node_id = osm.find_closest_node(
                 G, data.position["longitude"], data.position["latitude"]
             )
-            print("closest_node_id", closest_node_id)
+            print("Closest node ID: ", closest_node_id)
+
             longitude, latitude = osm.find_x_y_coordinates_of_node(G, closest_node_id)
-            return {
+            print("Longitude and Latitude: ", longitude, latitude)
+
+            result = {
                 "vehicle_id": data.vehicle_id,
                 "position": {
                     "node_id": closest_node_id,
@@ -321,7 +354,11 @@ async def find_closest_node(data: VehicleData):
                     "latitude": latitude,
                 },
             }
+            print("Result: ", result)
+
+            return result
         except Exception as e:
+            print("An error occurred: ", str(e))
             raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -358,16 +395,26 @@ async def find_distance(data: Dict[str, Any]):
     async with lock:
         try:
             global G
+            print("Received data for find-distance: ", data)
+            print("Type of received data: ", type(data))
+
             distance = osm.find_distance(
                 G, data["source_node_id"], data["target_node_id"]
             )
-            return {"passenger_id": data["passenger_id"], "distance": distance}
+            print("Calculated distance: ", distance)
+
+            result = {"passenger_id": data["passenger_id"], "distance": distance}
+            print("Result: ", result)
+
+            return result
         except Exception as e:
+            print("An error occurred: ", str(e))
             raise HTTPException(status_code=400, detail=str(e))
 
 
 # Run the app with Uvicorn on a custom port
 if __name__ == "__main__":
+    print(osm.find_x_y_coordinates_of_node(G, 42433644))
     if len(sys.argv) != 3 or sys.argv[1] != "--port":
         print("Usage: python endpoint.py --port <port_number>")
         sys.exit(1)
