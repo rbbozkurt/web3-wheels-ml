@@ -12,19 +12,34 @@ import networkx as nx
 import numpy as np
 import osmnx as ox
 import uvicorn
+import yaml
 from fastapi import FastAPI, HTTPException
 from networkx.readwrite import json_graph
 from pydantic import BaseModel
 
-
 import openstreetsmap_api as osm
 
+project_root = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
+)  # TODO: Fix paths for import if possible
+sys.path.append(project_root)
+from src.agents.coordinator_agent import AICoordinator
+from src.envs.osm_env import RideShareEnv
 
 # Initialize FastAPI app
 app = FastAPI()
 
 # Example graph for demonstration
-G = osm.G_map_from_address("350 5th Ave, New York, New York")
+city = "Piedmont, California, USA"
+G = osm.G_map_from_address("350 5th Ave, New York, New York")  # TODO Try new city
+
+# Initialize AI Coordinator
+with open("src/training/ppo_config.yml", "r") as f:
+    config = yaml.safe_load(f)
+trained_coordinator = AICoordinator(RideShareEnv(map_area=city), config)
+trained_coordinator.model = trained_coordinator.model.load(
+    "src/training/saved_models/trained_coordinator"
+)
 
 
 # Function to serialize a graph to a dictionary
@@ -35,36 +50,6 @@ def serialize_graph(graph: nx.MultiDiGraph) -> Dict[str, Any]:
 # Function to deserialize a dictionary to a graph
 def deserialize_graph(data: Dict[str, Any]) -> nx.MultiDiGraph:
     return nx.node_link_graph(data)
-
-
-# TODO: function to Initialize Agent and add to list
-
-"""
-usage: taxi = TaxiAgent(environment, carInfo)
-where carInfo is a dictionary with the following keys:
-        carInfo["name"]
-        carInfo["description"]
-        carInfo["vin"]
-        carInfo["position"]["longitude"],
-        carInfo["position"]["latitude"],
-
-        ## Other properties are OPTIONAL
-
-Then add to env: RideShareEnv.add_agent(taxi)
-"""
-# TODO: function to Initialize Passenger and add to list
-
-"""
-usage:
-    passenger = Passenger(
-        passenger_id=1,
-        pickup_location={"latitude": 37.824454, "longitude": -122.231589},
-        dropoff_location={"latitude": 37.821592, "longitude": -122.234797},
-    )
-
-
-Then add to env: RideShareEnv.add_passenger(passenger)
-"""
 
 
 @app.get("/")
@@ -152,7 +137,9 @@ async def find_destinations(data: Dict[str, Any]):
         print("data", data)
         print("type of data", type(data))
         # numpy array with size of (10, 2)
-        actions = np.random.rand(10, 2)  # TODO replace with actual coordinator call
+        actions = trained_coordinator.inference(
+            data
+        )  # TODO replace with actual coordinator call
         print("actions", actions)
         # take first data.num_agents from array
         agents_actions = actions[: data["num_agents"]]
@@ -311,9 +298,3 @@ if __name__ == "__main__":
     port = int(sys.argv[2])
     print(f"Running API on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
-
-    env = RideShareEnv()
-
-    # Continuously update the environment
-    while True:
-        env.step()

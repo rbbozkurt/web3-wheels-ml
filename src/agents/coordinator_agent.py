@@ -92,5 +92,40 @@ class AICoordinator(gym.Env):
     def get_action(self, observation):
         return self.model.predict(observation, deterministic=True)[0]
 
+    def inference(self, observation):
+        """Inference for use with python API
+
+        Args:
+            observation (dict): dictionary following format of observation space
+        Returns: actions (np.ndarray): array of actions for each agent
+        """
+        # preprocess dictionary to fit format
+
+        # Get actions. Output is numpy array of size (n_taxis,2)
+        actions = self.model.predict(observation, deterministic=True)[0]
+
+        # Initialize the destination array
+        destination = np.zeros((10, 2))
+
+        # Convert normalized action value to longitude and latitude
+        for i, action in enumerate(actions):
+            # Find the closest node based on the continuous action value
+            closest_node_id = None
+            min_distance = float("inf")
+            for normalized_action, node_id in self.env.action_to_node_mapping.items():
+                distance = np.sqrt(
+                    (action[0] - normalized_action[0]) ** 2
+                    + (action[1] - normalized_action[1]) ** 2
+                )
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_node_id = node_id
+
+            # Update the destination array with longitude and latitude
+            destination[i, 0] = self.env.map_network.nodes[closest_node_id]["x"]
+            destination[i, 1] = self.env.map_network.nodes[closest_node_id]["y"]
+
+        return destination
+
     def get_policy(self):
         return self.model.policy
