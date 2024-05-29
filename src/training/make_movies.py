@@ -30,7 +30,7 @@ def evaluate(coordinator, num_episodes):
     for episode in range(num_episodes):
         # Pick a city randomly from the list of cities for evaluation
         city = random.choice(config["cities"])
-        env = RideShareEnv(city)
+        env = RideShareEnv(config, city)
         env.coordinator = coordinator
         done = False
         episode_reward = 0
@@ -87,7 +87,9 @@ def evaluate(coordinator, num_episodes):
                     passenger = Passenger(**passenger_info)
                     env.add_passenger(passenger)
 
-            next_observation, actions, rewards, done, _ = env.step(time_interval=2)
+            next_observation, actions, rewards, done, _ = env.step(
+                time_interval=config["time_interval"]
+            )
             episode_reward += sum(rewards)
 
             # Render the environment for the current frame
@@ -99,11 +101,14 @@ def evaluate(coordinator, num_episodes):
         # Create the animation
         ani = animation.FuncAnimation(fig, update, frames=100, interval=500)
         now = datetime.now()
-        folder_name = now.strftime("%Y-%m-%d_%H-%M-%S")
+        folder_name = now.strftime("%Y-%m-%d")
+        filename = now.strftime("%H-%M-%S")
         if not os.path.exists(f"results/{folder_name}"):
             os.makedirs(f"results/{folder_name}")
         # Save the file to the new folder
-        ani.save(f"results/{folder_name}/episode_{episode+1}.gif", writer="pillow")
+        ani.save(
+            f"results/{folder_name}/{filename}_episode_{episode+1}.gif", writer="pillow"
+        )
 
         # Close the figure
         plt.close(fig)

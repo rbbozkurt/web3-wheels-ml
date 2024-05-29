@@ -17,7 +17,9 @@ from ..agents import (
 
 
 class RideShareEnv(Env):
-    def __init__(self, map_area="Piedmont, California, USA", max_time_steps=500):
+    def __init__(
+        self, config, map_area="Piedmont, California, USA", max_time_steps=500
+    ):
         """
         Initialize the ride-sharing environment.
         - Download the street network data using OSMnx
@@ -27,6 +29,9 @@ class RideShareEnv(Env):
         self.map_network = ox.graph_from_place(map_area, network_type="drive")
         self.taxi_agents = []
         self.passengers = []
+        self.max_agents = config["max_taxis"]
+        self.max_passengers = config["max_passengers"]
+
         self.action_space = self._get_action_space()
         self.map_bounds = self.get_map_bounds()
         self.action_to_node_mapping = self._create_action_to_node_mapping()
@@ -59,29 +64,23 @@ class RideShareEnv(Env):
 
         return False
 
-    def observation_space(self):
-        return self._get_observation_space(self.taxi_agents, self.passengers)
-
     def _get_observation_space(self):
-        max_agents = 10  # Define the maximum number of agents
-        max_passengers = 20  # Define the maximum number of passengers
-
         observation_space = spaces.Dict(
             {
                 "num_agents": spaces.Box(
-                    low=0, high=max_agents, shape=(1,), dtype=np.int32
+                    low=0, high=self.max_agents, shape=(1,), dtype=np.int32
                 ),
                 "num_passengers": spaces.Box(
-                    low=0, high=max_passengers, shape=(1,), dtype=np.int32
+                    low=0, high=self.max_passengers, shape=(1,), dtype=np.int32
                 ),
                 "agent_positions": spaces.Box(
-                    low=-180, high=180, shape=(max_agents, 2), dtype=np.float32
+                    low=-180, high=180, shape=(self.max_agents, 2), dtype=np.float32
                 ),
                 "passenger_positions": spaces.Box(
-                    low=-180, high=180, shape=(max_passengers, 2), dtype=np.float32
+                    low=-180, high=180, shape=(self.max_passengers, 2), dtype=np.float32
                 ),
                 "passenger_destinations": spaces.Box(
-                    low=-180, high=180, shape=(max_passengers, 2), dtype=np.float32
+                    low=-180, high=180, shape=(self.max_passengers, 2), dtype=np.float32
                 ),
                 # Add other relevant observations based on TaxiAgent and Passenger properties
             }
@@ -95,8 +94,7 @@ class RideShareEnv(Env):
         return bounds
 
     def _get_action_space(self):
-        num_agents = len(self.taxi_agents)
-        return spaces.Box(low=-1, high=1, shape=(num_agents, 2), dtype=float)
+        return spaces.Box(low=-1, high=1, shape=(self.max_agents, 2), dtype=float)
 
     def _create_action_to_node_mapping(self):
         action_to_node_mapping = {}
@@ -358,7 +356,9 @@ class RideShareEnv(Env):
             if taxi.destination:
                 path = self.get_route(taxi.position["node"], taxi.destination)
                 if path:
-                    ox.plot_graph_route(self.map_network, path, node_size=0, ax=ax)
+                    ox.plot_graph_route(
+                        self.map_network, path, node_size=0, ax=ax, route_linewidth=2
+                    )
 
         # Plot passengers on the map
         for passenger in self.passengers:

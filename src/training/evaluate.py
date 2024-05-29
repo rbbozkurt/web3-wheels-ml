@@ -26,7 +26,7 @@ def evaluate(coordinator, num_episodes):
     for episode in range(num_episodes):
         # Pick a city randomly from the list of cities for evaluation
         city = random.choice(config["cities"])
-        env = RideShareEnv(city)
+        env = RideShareEnv(config, city)
         env.coordinator = coordinator
         done = False
         episode_reward = 0
@@ -74,7 +74,9 @@ def evaluate(coordinator, num_episodes):
                     passenger = Passenger(**passenger_info)
                     env.add_passenger(passenger)
 
-            next_observation, actions, rewards, done, _ = env.step(time_interval=2)
+            next_observation, actions, rewards, done, _ = env.step(
+                time_interval=config["time_interval"]
+            )
             episode_reward += sum(rewards)
 
         total_reward += episode_reward

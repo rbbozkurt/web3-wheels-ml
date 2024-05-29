@@ -26,11 +26,15 @@ with open("src/training/ppo_config.yml", "r") as f:
 def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
     city = random.choice(config["cities"])
     max_time_steps = config["max_time_steps"]
-    env = RideShareEnv(city, max_time_steps)
-    coordinator = AICoordinator(
-        env,
-        config,
-    )
+    env = RideShareEnv(config, city, max_time_steps)
+    coordinator = AICoordinator(env, config)
+    # Check if a saved model exists
+    saved_model_path = "src/training/saved_models/trained_coordinator"
+    if os.path.exists(saved_model_path + ".zip"):
+        # Load the saved model
+        coordinator.model.load(saved_model_path, env=env)
+        print("Loaded previously trained model.")
+
     env.coordinator = coordinator
     replay_buffer = ReplayBuffer(replay_buffer_capacity)
 
@@ -84,7 +88,9 @@ def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
                     passenger = Passenger(**passenger_info)
                     env.add_passenger(passenger)
             observation = env._get_observation()
-            next_observation, actions, rewards, done, _ = env.step(time_interval=3)
+            next_observation, actions, rewards, done, _ = env.step(
+                time_interval=config["time_interval"]
+            )
 
             if actions is not None:
                 replay_buffer.push(

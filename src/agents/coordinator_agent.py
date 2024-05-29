@@ -45,35 +45,10 @@ class AICoordinator(gym.Env):
         self.model._custom_logger = True
 
     def _get_observation_space(self):
-        return gym.spaces.Dict(
-            {
-                "num_agents": gym.spaces.Box(
-                    low=0, high=self.max_agents, shape=(1,), dtype=int
-                ),
-                "num_passengers": gym.spaces.Box(
-                    low=0, high=self.max_passengers, shape=(1,), dtype=int
-                ),
-                "agent_positions": gym.spaces.Box(
-                    low=-np.inf, high=np.inf, shape=(self.max_agents, 2), dtype=float
-                ),
-                "passenger_positions": gym.spaces.Box(
-                    low=-np.inf,
-                    high=np.inf,
-                    shape=(self.max_passengers, 2),
-                    dtype=float,
-                ),
-                "passenger_destinations": gym.spaces.Box(
-                    low=-np.inf,
-                    high=np.inf,
-                    shape=(self.max_passengers, 2),
-                    dtype=float,
-                ),
-            }
-        )
+        return self.env.observation_space
 
     def _get_action_space(self):
-        num_agents = self.max_agents
-        return gym.spaces.Box(low=-1, high=1, shape=(num_agents, 2), dtype=float)
+        return self.env.action_space
 
     def reset(self) -> GymObs:
         return self.env.reset()
