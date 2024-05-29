@@ -4,40 +4,34 @@
 import os
 import random
 import sys
+from datetime import datetime
 
 import yaml
-from memory import ReplayBuffer
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.append(project_root)
 
-import numpy as np
+import matplotlib.animation as animation
+import matplotlib.pyplot as plt
 
 from src.agents.coordinator_agent import AICoordinator
 from src.agents.passenger import Passenger
 from src.agents.taxi_agent import TaxiAgent
 from src.envs.osm_env import RideShareEnv
 
-# Load training parameters from ppo_config.yml file
+# Load evaluation parameters from ppo_config.yml file
 with open("src/training/ppo_config.yml", "r") as f:
     config = yaml.safe_load(f)
 
 
-def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
-    city = random.choice(config["cities"])
-    max_time_steps = config["max_time_steps"]
-    env = RideShareEnv(city, max_time_steps)
-    coordinator = AICoordinator(
-        env,
-        config,
-    )
-    env.coordinator = coordinator
-    replay_buffer = ReplayBuffer(replay_buffer_capacity)
+def evaluate(coordinator, num_episodes):
+    total_reward = 0
 
     for episode in range(num_episodes):
-        # Pick a city randomly from the list of cities for training
+        # Pick a city randomly from the list of cities for evaluation
         city = random.choice(config["cities"])
-        env.reset(city)
+        env = RideShareEnv(city)
+        env.coordinator = coordinator
         done = False
         episode_reward = 0
 
@@ -58,7 +52,16 @@ def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
             taxi_agent = TaxiAgent(env, taxi_info)
             env.add_agent(taxi_agent)
 
-        while not done:
+        # Create a figure and axis for the animation
+        fig, ax = plt.subplots()
+
+        # Define the update function for the animation
+        def update(frame):
+            nonlocal done, episode_reward
+
+            # Clear the previous plot
+            ax.clear()
+
             # Probabilistically add passengers to random locations on the map
             if random.random() < config["passenger_spawn_probability"]:
                 if len(env.passengers) < config["max_passengers"]:
@@ -83,33 +86,41 @@ def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
                     }
                     passenger = Passenger(**passenger_info)
                     env.add_passenger(passenger)
-            observation = env._get_observation()
-            next_observation, actions, rewards, done, _ = env.step(time_interval=3)
 
-            if actions is not None:
-                replay_buffer.push(
-                    observation, actions, np.sum(rewards), next_observation, done
-                )
-            episode_reward += np.sum(rewards)
+            next_observation, actions, rewards, done, _ = env.step(time_interval=2)
+            episode_reward += sum(rewards)
 
+            # Render the environment for the current frame
+            env.render(ax=ax, output_file=None)
+
+            # Set the title for the current frame
+            ax.set_title(f"Episode {episode+1} - Step: {frame}")
+
+        # Create the animation
+        ani = animation.FuncAnimation(fig, update, frames=100, interval=500)
+        now = datetime.now()
+        folder_name = now.strftime("%Y-%m-%d_%H-%M-%S")
+        if not os.path.exists(f"results/{folder_name}"):
+            os.makedirs(f"results/{folder_name}")
+        # Save the file to the new folder
+        ani.save(f"results/{folder_name}/episode_{episode+1}.gif", writer="pillow")
+
+        # Close the figure
+        plt.close(fig)
+
+        total_reward += episode_reward
         print(f"Episode {episode+1}: Reward = {episode_reward}")
 
-        # Train the coordinator after each episode
-        if len(replay_buffer) >= batch_size:
-            for _ in range(num_training_steps):
-                experiences = replay_buffer.sample(batch_size)
-                coordinator.train(experiences)
-
-    return coordinator
+    average_reward = total_reward / num_episodes
+    print(f"Average Reward over {num_episodes} episodes: {average_reward}")
 
 
 if __name__ == "__main__":
-    num_episodes = config["num_episodes"]
-    batch_size = config["batch_size"]
-    replay_buffer_capacity = config["replay_buffer_capacity"]
-
-    trained_coordinator = train(
-        num_episodes, batch_size, replay_buffer_capacity, num_training_steps=3
+    # Load the trained coordinator
+    trained_coordinator = AICoordinator(RideShareEnv(), config)
+    trained_coordinator.model = trained_coordinator.model.load(
+        "src/training/saved_models/trained_coordinator"
     )
-    # Save the trained coordinator if needed
-    trained_coordinator.model.save("src/training/saved_models/trained_coordinator")
+
+    num_episodes = config["eval_num_episodes"]
+    evaluate(trained_coordinator, num_episodes)

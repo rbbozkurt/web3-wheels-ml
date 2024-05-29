@@ -1,15 +1,22 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
 
+import os
+import sys
+
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import osmnx as ox
 
-from agents import TaxiAgent
-from envs import RideShareEnv
+# Add the parent directory of 'tests' to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from src.agents.passenger import Passenger
+from src.agents.taxi_agent import TaxiAgent
+from src.envs.osm_env import RideShareEnv
 
 
-def test_adding_agents():
+def test_adding_taxi_agents():
     # Create a ride-sharing environment
     map_area = "Piedmont, California, USA"
     env = RideShareEnv(map_area)
@@ -18,20 +25,19 @@ def test_adding_agents():
     car_info_1 = {
         "name": "Car 1",
         "vin": "ABC123",
-        "year": 2022,
-        "mileage": 10000,
-        "fuel": 50,
-        "model": "Sedan",
+        "description": "Sedan",
+        "mileage_km": 10000,
+        "tankCapacity": 50,
         "position": {"latitude": 37.824454, "longitude": -122.231589},
     }
 
     car_info_2 = {
         "name": "Car 2",
         "vin": "XYZ789",
-        "year": 2021,
-        "mileage": 15000,
+        "description": "Sedan",
+        "mileage_km": 15000,
         "fuel": 60,
-        "model": "SUV",
+        "tankCapacity": "SUV",
         "position": {"latitude": 37.821592, "longitude": -122.234797},
     }
 
@@ -44,9 +50,9 @@ def test_adding_agents():
     env.add_agent(agent_2)
 
     # Assert that the agents are added to the environment correctly
-    assert len(env.agents) == 2
-    assert agent_1 in env.agents
-    assert agent_2 in env.agents
+    assert len(env.taxi_agents) == 2
+    assert agent_1 in env.taxi_agents
+    assert agent_2 in env.taxi_agents
 
     env.render()
 
@@ -60,17 +66,16 @@ def test_agent_movement():
     car_info_1 = {
         "name": "Car 1",
         "vin": "ABC123",
-        "year": 2022,
-        "mileage": 10000,
-        "fuel": 50,
-        "model": "Sedan",
+        "description": "Sedan",
+        "mileage_km": 10000,
+        "tankCapacity": 50,
         "position": {"latitude": 37.824454, "longitude": -122.231589},
     }
 
     # Create agent instances using the car information
     agent_1 = TaxiAgent(env, car_info_1)
 
-    # Add the agents to the environment
+    # Add the taxi_agents to the environment
     env.add_agent(agent_1)
 
     # Set a destination for the agent
@@ -88,7 +93,7 @@ def test_agent_movement():
     # Define the update function for the animation
     def update(frame):
         # Check if the agent has reached the destination
-        if agent_1.position == destination:
+        if agent_1.position["node"] == destination:
             state["reached_destination"] = True
 
         else:
@@ -104,7 +109,7 @@ def test_agent_movement():
             ax.set_title(f"Step: {frame}")
 
     # Get the shortest path from the agent's current position to the destination
-    path = env.get_route(agent_1.position, destination)
+    path = env.get_route(agent_1.position["node"], destination)
 
     # Create the animation
     ani = animation.FuncAnimation(fig, update, frames=max_steps, interval=500)
@@ -122,3 +127,18 @@ def test_agent_movement():
     assert state[
         "reached_destination"
     ], "Agent did not reach the destination within the maximum number of steps"
+
+
+def test_adding_passengers():
+    map_area = "Piedmont, California, USA"
+    env = RideShareEnv(map_area)
+
+    passenger = Passenger(
+        passenger_id=1,
+        pickup_location={"latitude": 37.824454, "longitude": -122.231589},
+        destination={"latitude": 37.821592, "longitude": -122.234797},
+    )
+    env.add_passenger(passenger)
+
+    assert passenger in env.passengers
+    env.render()
