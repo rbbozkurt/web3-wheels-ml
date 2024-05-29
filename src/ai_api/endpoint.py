@@ -139,6 +139,35 @@ async def find_destinations(data: Dict[str, Any]):
 
 @app.post("/ai-api/mock/find-destinations")
 async def find_mock_destinations(data: Dict[str, Any]):
+    """
+    This function is an endpoint that finds the best matches for vehicles and passengers based on their node IDs.
+
+    It accepts a POST request with a JSON body containing two arrays: 'vehicle_node_ids' and 'passenger_node_ids'.
+    Each array should contain integers representing node IDs.
+
+    Example request body:
+    {
+        "vehicle_node_ids": [42433644,1312312],
+        "passenger_node_ids": [42459032342398,42433644, 42459098, 31231]
+    }
+
+    The function returns a list of dictionaries. Each dictionary contains a 'vehicle_node_id' and a 'destination_node_id'.
+    The 'destination_node_id' is the best match for the corresponding 'vehicle_node_id'.
+
+    Example response:
+    [
+        {
+            "vehicle_node_id": 42433644,
+            "destination_node_id": 42433644
+        }
+    ]
+
+    If an error occurs during the process, it raises an HTTPException with status code 400 and the error message as detail.
+
+    :param data: A dictionary containing two keys: 'vehicle_node_ids' and 'passenger_node_ids'.
+                 Each key corresponds to an array of integers representing node IDs.
+    :return: A list of dictionaries. Each dictionary contains a 'vehicle_node_id' and a 'destination_node_id'.
+    """
     async with lock:
         try:
             global G
@@ -156,20 +185,32 @@ async def find_mock_destinations(data: Dict[str, Any]):
 @app.post("/ai-api/find-route")
 async def find_route(data: Dict[str, Any]):
     """
-    Find the path between two nodes in the map.
+    Find the shortest path between two nodes in the map for a given vehicle.
 
     Args:
-        data (Dict[str, Any]): A dictionary containing the following
-            keys:
+        data (Dict[str, Any]): A dictionary containing the following keys:
+            - vehicle_id (Any): The ID of the vehicle.
             - source_node_id (Any): The ID of the source node.
             - target_node_id (Any): The ID of the target node.
-            - passenger_id (Any): The ID of the passenger.
-            eg.
-            data = {
-                "vehicle_id": 1,
-                "source_node_id": 2,
-                "target_node_id": 3,
-                }
+
+        eg. data = {
+            "vehicle_id": 1,
+            "source_node_id": 42433644,
+            "target_node_id": 42433644,
+        }
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the vehicle ID and the shortest route from source node to target node.
+
+        eg. return {
+            "vehicle_id": 1,
+            "route": [
+                42433644
+            ]
+        }
+
+    Raises:
+        HTTPException: If an error occurs during the route finding process.
     """
 
     async with lock:
