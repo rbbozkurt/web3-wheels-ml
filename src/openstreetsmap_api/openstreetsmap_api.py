@@ -43,10 +43,15 @@ def find_best_matches(G, vehicle_node_ids, destinations_node_id):
     This function finds the best matches between vehicles and destinations.
     """
     best_matches = []
+    assigned_destinations = set()
     for vehicle_node_id in vehicle_node_ids:
         distances = []
         for dest_node_id in destinations_node_id:
-            if vehicle_node_id in G and dest_node_id in G:
+            if (
+                vehicle_node_id in G
+                and dest_node_id in G
+                and dest_node_id not in assigned_destinations
+            ):
                 try:
                     distance = nx.shortest_path_length(G, vehicle_node_id, dest_node_id)
                     heapq.heappush(distances, (distance, dest_node_id))
@@ -55,6 +60,7 @@ def find_best_matches(G, vehicle_node_ids, destinations_node_id):
         if distances:
             best_match = heapq.heappop(distances)[1]
             best_matches.append((vehicle_node_id, best_match))
+            assigned_destinations.add(best_match)
     return best_matches
 
 

@@ -414,7 +414,6 @@ async def find_distance(data: Dict[str, Any]):
 
 # Run the app with Uvicorn on a custom port
 if __name__ == "__main__":
-    print(osm.find_x_y_coordinates_of_node(G, 42433644))
     if len(sys.argv) != 3 or sys.argv[1] != "--port":
         print("Usage: python endpoint.py --port <port_number>")
         sys.exit(1)
