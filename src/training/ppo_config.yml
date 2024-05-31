@@ -17,7 +17,7 @@ passenger_spawn_probability: 0.1
 # Training amount
 time_interval: 10 # Time interval - basically agent speed
 max_time_steps: 1024 # for each episode
-total_time_steps: 20000 # for the entire training. for train2
+total_time_steps: 100000 # for the entire training. for train2
 
 # Training parameters
 num_episodes: 50 #for old training

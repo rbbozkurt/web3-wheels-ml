@@ -73,7 +73,7 @@ def reward_function_2(env, current_time_step):
             # passenger.update_waiting_time()
             waiting_time_minutes = current_time_step - passenger.ride_request_time
             total_reward -= (
-                0.001 * waiting_time_minutes
+                0.0005 * waiting_time_minutes
             )  # Penalty scaled down based on waiting time in minutes
 
     return total_reward
