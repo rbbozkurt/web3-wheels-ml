@@ -21,7 +21,7 @@ class AICoordinator(gym.Env):
         # Configure the logger
         self.logger = configure(
             folder="src/training/logger",
-            format_strings=["stdout", "log", "csv", "tensorboard"],
+            format_strings=["log", "csv", "tensorboard"],
         )
 
         # Initialize the SAC model with the logger and configuration parameters
@@ -29,6 +29,7 @@ class AICoordinator(gym.Env):
             "MultiInputPolicy",
             env,
             verbose=0,
+            batch_size=config["batch_size"],
             tensorboard_log=self.logger.get_dir(),
             learning_rate=config["actor_learning_rate"],
             gamma=config["gamma"],
@@ -42,8 +43,6 @@ class AICoordinator(gym.Env):
                 },
             },
         )
-        # self.model._logger = self.logger
-        # self.model._custom_logger = True
 
     def _get_observation_space(self):
         return self.env.observation_space

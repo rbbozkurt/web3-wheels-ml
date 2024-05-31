@@ -13,6 +13,7 @@ sys.path.append(project_root)
 
 import numpy as np
 import tensorflow as tf
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from src.agents.coordinator_agent import AICoordinator
 from src.agents.passenger import Passenger
@@ -24,8 +25,17 @@ with open("src/training/ppo_config.yml", "r") as f:
     config = yaml.safe_load(f)
 
 
+def make_env():
+    def _init():
+        env = RideShareEnv(config)
+        return env
+
+    return _init
+
+
 def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
-    env = RideShareEnv(config)
+    num_envs = 12  # Number of parallel environments
+    env = SubprocVecEnv([make_env() for _ in range(num_envs)])
     coordinator = AICoordinator(env, config)
     # Check if a saved model exists
     saved_model_path = "src/training/saved_models/trained_coordinator"
@@ -132,9 +142,9 @@ def train2():
     env.coordinator = coordinator
 
     coordinator.model.learn(
-        total_timesteps=1000,
+        total_timesteps=config["total_time_steps"],
         log_interval=100,
-        tb_log_name="learnMethod",
+        tb_log_name="parallel_training",
         callback=coordinator._on_step,
     )
     return coordinator

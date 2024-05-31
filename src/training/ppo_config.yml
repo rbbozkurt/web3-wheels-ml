@@ -14,19 +14,20 @@ max_passengers: 20
 # Probability of spawning a new passenger at each time step
 passenger_spawn_probability: 0.1
 
-# Time interval - basically agent speed
-time_interval: 10
-max_time_steps: 800
+# Training amount
+time_interval: 10 # Time interval - basically agent speed
+max_time_steps: 1024 # for each episode
+total_time_steps: 20000 # for the entire training. for train2
+
 # Training parameters
-num_episodes: 10
-batch_size: 256
+num_episodes: 50 #for old training
+batch_size: 1024
 replay_buffer_capacity: 10000
 # Hyperparameters for the DdpgAgent
 actor_learning_rate: 0.001
 critic_learning_rate: 0.001
 gamma: 0.99
 tau: 0.005
-
 # Exploration parameters
 exploration_noise_std: 0.1
 exploration_noise_clip: 0.5

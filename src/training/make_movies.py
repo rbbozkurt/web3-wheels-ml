@@ -98,6 +98,6 @@ def make_movies(num_episodes, num_steps):
 
 
 if __name__ == "__main__":
-    num_episodes = 2  # Specify the number of episodes to evaluate
-    num_steps = 100  # Specify the number of steps in each episode
+    num_episodes = 1  # Specify the number of episodes to evaluate
+    num_steps = 300  # Specify the number of steps in each episode
     make_movies(num_episodes, num_steps)
