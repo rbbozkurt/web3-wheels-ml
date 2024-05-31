@@ -1,42 +1,40 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2024 Harshil Dave <harshil128@gmail.com>
 
+import random
+
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import osmnx as ox
 from gymnasium import Env, spaces
 
-from ..agents import (
-    AICoordinator,
-    Passenger,
-    TaxiAgent,
-    reward_function_2,
-    reward_function_basic,
-)
+from ..agents import Passenger, TaxiAgent, reward_function_2
 
 
 class RideShareEnv(Env):
-    def __init__(
-        self, config, map_area="Piedmont, California, USA", max_time_steps=500
-    ):
+    def __init__(self, config):
         """
         Initialize the ride-sharing environment.
         - Download the street network data using OSMnx
         - Convert the data into a graph representation (nodes and edges)
         - Define the observation and action spaces
         """
-        self.map_network = ox.graph_from_place(map_area, network_type="drive")
+        self.config = config
+        self.cities = config["cities"]
+        city = random.choice(self.cities)
+        self.map_network = ox.graph_from_place(city, network_type="drive")
         self.taxi_agents = []
         self.passengers = []
         self.max_agents = config["max_taxis"]
         self.max_passengers = config["max_passengers"]
-
+        self.time_interval = config["time_interval"]
+        self.total_passengers_completed = 0
         self.action_space = self._get_action_space()
         self.map_bounds = self.get_map_bounds()
         self.action_to_node_mapping = self._create_action_to_node_mapping()
         self.current_time_step = 0
-        self.max_time_steps = max_time_steps
+        self.max_time_steps = config["max_time_steps"]
         self.observation_space = self._get_observation_space()
         self.coordinator = []
 
@@ -53,16 +51,18 @@ class RideShareEnv(Env):
         self.taxi_agents.append(agent)
 
     def _is_done(self):
-        # Check if the maximum time step limit has been reached
-        if self.current_time_step >= self.max_time_steps:
-            return True
+        terminated = False
+        truncated = False
 
         # Check if all passengers have reached their destinations
-        for passenger in self.passengers:
-            if not passenger.completed:
-                return False
+        if all(passenger.completed for passenger in self.passengers):
+            terminated = True
 
-        return False
+        # Check if the maximum time step limit has been reached
+        if self.current_time_step >= self.max_time_steps:
+            truncated = True
+
+        return terminated, truncated
 
     def _get_observation_space(self):
         observation_space = spaces.Dict(
@@ -121,17 +121,16 @@ class RideShareEnv(Env):
         return action_to_node_mapping
 
     def _get_observation(self):
-        num_agents = len(self.taxi_agents)
-        num_passengers = len(self.passengers)
-
         # Filter taxi agents without passengers
         taxi_agents_without_passengers = [
             agent for agent in self.taxi_agents if not agent.passengers
         ]
         num_agents_without_passengers = len(taxi_agents_without_passengers)
 
-        agent_positions = np.zeros((self.observation_space["agent_positions"].shape))
+        agent_positions = np.zeros((self.max_agents, 2))
         for i, agent in enumerate(taxi_agents_without_passengers):
+            if i >= self.max_agents:
+                break
             agent_positions[i] = np.array(
                 [agent.position["longitude"], agent.position["latitude"]]
             )
@@ -142,23 +141,15 @@ class RideShareEnv(Env):
         ]
         num_passengers_not_picked_up = len(passengers_not_picked_up)
 
-        passenger_positions = np.zeros(
-            (self.observation_space["passenger_positions"].shape)
-        )
+        passenger_positions = np.zeros((self.max_passengers, 2))
+        passenger_destinations = np.zeros((self.max_passengers, 2))
         for i, passenger in enumerate(passengers_not_picked_up):
-            if i >= num_passengers_not_picked_up:
+            if i >= self.max_passengers:
                 break
             pickup_location = passenger.pickup_location
             passenger_positions[i] = np.array(
                 [pickup_location["longitude"], pickup_location["latitude"]]
             )
-
-        passenger_destinations = np.zeros(
-            (self.observation_space["passenger_destinations"].shape)
-        )
-        for i, passenger in enumerate(passengers_not_picked_up):
-            if i >= num_passengers_not_picked_up:
-                break
             destination = passenger.destination
             passenger_destinations[i] = np.array(
                 [destination["longitude"], destination["latitude"]]
@@ -166,8 +157,8 @@ class RideShareEnv(Env):
 
         # Input observation to model. Do not change keys
         observation = {
-            "num_agents": np.array([num_agents_without_passengers]),
-            "num_passengers": np.array([num_passengers_not_picked_up]),
+            "num_agents": np.array([num_agents_without_passengers], dtype=np.int32),
+            "num_passengers": np.array([num_passengers_not_picked_up], dtype=np.int32),
             "agent_positions": agent_positions,
             "passenger_positions": passenger_positions,
             "passenger_destinations": passenger_destinations,
@@ -206,15 +197,56 @@ class RideShareEnv(Env):
 
         self.passengers.remove(passenger)
 
-    def reset(self, map_area="Piedmont, California, USA"):
+    def generate_taxis(self, num_taxis):
+        for _ in range(num_taxis):
+            node = random.choice(list(self.map_network.nodes))
+            taxi_info = {
+                "name": f"Taxi_{_}",
+                "vin": f"VIN_{_}",
+                "description": "Random Taxi",
+                "mileage_km": random.randint(1000, 10000),
+                "tankCapacity": random.randint(40, 60),
+                "position": {
+                    "node": node,
+                    "latitude": self.map_network.nodes[node]["y"],
+                    "longitude": self.map_network.nodes[node]["x"],
+                },
+            }
+            taxi_agent = TaxiAgent(self, taxi_info)
+            self.add_agent(taxi_agent)
+
+    def generate_passenger(self):
+        node_pickup = random.choice(list(self.map_network.nodes))
+        node_destination = random.choice(list(self.map_network.nodes))
+        passenger_info = {
+            "passenger_id": len(self.passengers) + 1,
+            "request_time": self.current_time_step,
+            "pickup_location": {
+                "node": node_pickup,
+                "latitude": self.map_network.nodes[node_pickup]["y"],
+                "longitude": self.map_network.nodes[node_pickup]["x"],
+            },
+            "destination": {
+                "node": node_destination,
+                "latitude": self.map_network.nodes[node_destination]["y"],
+                "longitude": self.map_network.nodes[node_destination]["x"],
+            },
+        }
+        passenger = Passenger(**passenger_info)
+        self.passengers.append(passenger)
+
+    def reset(self, seed=None, **kwargs):
         """
         Reset the environment to its initial state.
         - Reset agent positions, fuel levels, etc.
         - Generate new passengers with pickup and dropoff locations
         - Return the initial observation
         """
+        if seed is not None:
+            random.seed(seed)
 
-        self.map_network = ox.graph_from_place(map_area, network_type="drive")
+        city = random.choice(self.cities)
+        self.map_network = ox.graph_from_place(city, network_type="drive")
         self.taxi_agents = []
         self.passengers = []
         self.action_space = self._get_action_space()
@@ -222,16 +254,23 @@ class RideShareEnv(Env):
         self.action_to_node_mapping = self._create_action_to_node_mapping()
         self.current_time_step = 0
         self.observation_space = self._get_observation_space()
+        self.total_passengers_completed = 0
 
-    def step(self, time_interval=0.5):
+        # Generate random taxis and place them in random locations in the city
+        num_taxis = random.randint(5, self.config["max_taxis"])
+        self.generate_taxis(num_taxis)
+        reset_info = {}  # Add any reset information you want to return
+        return self._get_observation(), reset_info
+
+    def step(self, actions):
         """
         Perform one time step in the environment
         - Update agent positions based on their actions
-        - Check for ride completion, collisions, or other events
+        - Check for ride completion, passenger pickup and other events
         - Calculate and return rewards, next observations, done flags, and info
         """
         for taxi in self.taxi_agents:
-            taxi.action_move(time_interval)
+            taxi.action_move(self.time_interval)
 
         # Check for passenger pickup and drop-off events
         for taxi in self.taxi_agents:
@@ -251,6 +290,14 @@ class RideShareEnv(Env):
                     # Passenger drop-off event
                     taxi.action_dropoff(passenger)
                     passenger.set_completed(True)
+                    self.total_passengers_completed += 1
+
+        # Probabilistically add passengers to random locations on the map
+        if len(self.passengers) == 0:
+            self.generate_passenger()
+        if random.random() < self.config["passenger_spawn_probability"]:
+            if len(self.passengers) < self.config["max_passengers"]:
+                self.generate_passenger()
 
         # Get the next observation
         next_observation = self._get_observation()
@@ -263,7 +310,6 @@ class RideShareEnv(Env):
         # Check if any taxi does not have passengers
         if taxi_agents_without_passengers:
             # Call the AICoordinator to get the actions for the taxi agents
-            actions = self.coordinator.get_action(next_observation)
 
             # Assign destinations to taxi agents based on the actions
             for taxi, action in zip(taxi_agents_without_passengers, actions):
@@ -288,17 +334,21 @@ class RideShareEnv(Env):
             actions = None
 
         # Calculate rewards based on passenger waiting time and ride completion
-        rewards = reward_function_2(self)
-
+        rewards = reward_function_2(self, self.current_time_step)
+        total_reward = np.sum(rewards)
         # Check if the episode is done
-        done = self._is_done()
+        terminated, truncated = self._is_done()
         self.current_time_step += 1
         # print("Time step: ", self.current_time_step)
 
         # Provide additional information if needed
-        info = {}
+        info = {
+            "passengers_delivered": self.total_passengers_completed,
+            "num_passengers": len(self.passengers),
+            "episode_reward": total_reward,
+        }
 
-        return next_observation, actions, rewards, done, info
+        return next_observation, total_reward, terminated, truncated, info
 
     def get_route(self, start_node, end_node):
         """

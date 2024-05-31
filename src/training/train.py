@@ -12,6 +12,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 sys.path.append(project_root)
 
 import numpy as np
+import tensorflow as tf
 
 from src.agents.coordinator_agent import AICoordinator
 from src.agents.passenger import Passenger
@@ -24,9 +25,7 @@ with open("src/training/ppo_config.yml", "r") as f:
 
 
 def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
-    city = random.choice(config["cities"])
-    max_time_steps = config["max_time_steps"]
-    env = RideShareEnv(config, city, max_time_steps)
+    env = RideShareEnv(config)
     coordinator = AICoordinator(env, config)
     # Check if a saved model exists
     saved_model_path = "src/training/saved_models/trained_coordinator"
@@ -37,16 +36,16 @@ def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
 
     env.coordinator = coordinator
     replay_buffer = ReplayBuffer(replay_buffer_capacity)
+    summary_writer = tf.summary.create_file_writer("src/training/logger")
 
     for episode in range(num_episodes):
         # Pick a city randomly from the list of cities for training
-        city = random.choice(config["cities"])
-        env.reset(city)
+        env.reset()
         done = False
         episode_reward = 0
-
+        passenger_id = 1
         # Create random taxis and place them in random locations in the city
-        num_taxis = random.randint(1, config["max_taxis"])
+        num_taxis = random.randint(5, config["max_taxis"])
         for _ in range(num_taxis):
             taxi_info = {
                 "name": f"Taxi_{_}",
@@ -64,10 +63,12 @@ def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
 
         while not done:
             # Probabilistically add passengers to random locations on the map
+
             if random.random() < config["passenger_spawn_probability"]:
                 if len(env.passengers) < config["max_passengers"]:
                     passenger_info = {
-                        "passenger_id": len(env.passengers) + 1,
+                        "passenger_id": passenger_id,
+                        "request_time": env.current_time_step,
                         "pickup_location": {
                             "latitude": random.uniform(
                                 env.map_bounds[1], env.map_bounds[3]
@@ -87,9 +88,10 @@ def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
                     }
                     passenger = Passenger(**passenger_info)
                     env.add_passenger(passenger)
+                    passenger_id += 1
             observation = env._get_observation()
-            next_observation, actions, rewards, done, _ = env.step(
-                time_interval=config["time_interval"]
+            next_observation, actions, rewards, done, info = coordinator.step(
+                config["time_interval"]
             )
 
             if actions is not None:
@@ -99,7 +101,15 @@ def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
             episode_reward += rewards
 
         print(f"Episode {episode+1}: Reward = {episode_reward}")
-
+        # Calculate percentage of passengers picked up and delivered
+        num_passengers = passenger_id
+        passengers_delivered = info["passengers_delivered"]
+        ratio = passengers_delivered / num_passengers
+        # Log relevant data
+        with summary_writer.as_default():
+            tf.summary.scalar("train/reward", episode_reward, step=episode)
+            tf.summary.scalar("train/Percent_trips_completed", ratio, step=episode)
+        coordinator.logger.dump(step=episode)
         # Train the coordinator after each episode
         if len(replay_buffer) >= batch_size:
             for _ in range(num_training_steps):
@@ -109,13 +119,30 @@ def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
     return coordinator
 
 
-if __name__ == "__main__":
-    num_episodes = config["num_episodes"]
-    batch_size = config["batch_size"]
-    replay_buffer_capacity = config["replay_buffer_capacity"]
+def train2():
+    env = RideShareEnv(config)
+    coordinator = AICoordinator(env, config)
+    # Check if a saved model exists
+    saved_model_path = "src/training/saved_models/trained_coordinator"
+    if os.path.exists(saved_model_path + ".zip"):
+        # Load the saved model
+        coordinator.model.load(saved_model_path, env=env)
+        print("Loaded previously trained model.")
 
-    trained_coordinator = train(
-        num_episodes, batch_size, replay_buffer_capacity, num_training_steps=3
+    env.coordinator = coordinator
+
+    coordinator.model.learn(
+        total_timesteps=1000,
+        log_interval=100,
+        tb_log_name="learnMethod",
+        callback=coordinator._on_step,
     )
+    return coordinator
+
+
+if __name__ == "__main__":
+    trained_coordinator = train2()
+
     # Save the trained coordinator if needed
+    print("saving trained coordinator")
     trained_coordinator.model.save("src/training/saved_models/trained_coordinator")

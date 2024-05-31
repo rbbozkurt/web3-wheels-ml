@@ -16,13 +16,13 @@ passenger_spawn_probability: 0.1
 
 # Time interval - basically agent speed
 time_interval: 10
+max_time_steps: 800
 # Training parameters
-num_episodes: 2000
+num_episodes: 10
 batch_size: 256
 replay_buffer_capacity: 10000
-max_time_steps: 3000
 # Hyperparameters for the DdpgAgent
-actor_learning_rate: 0.0001
+actor_learning_rate: 0.001
 critic_learning_rate: 0.001
 gamma: 0.99
 tau: 0.005
@@ -33,17 +33,17 @@ exploration_noise_clip: 0.5
 
 # Network architecture
 actor_hidden_layers:
+  - 512
   - 256
   - 128
-  - 64
 critic_hidden_layers:
+  - 512
   - 256
   - 128
-  - 64
 
 # Training frequency
-train_every_n_steps: 1
-train_iterations: 1
+train_every_n_steps: 500
+gradient_steps: -1
 
 # Logging and checkpointing
 log_every_n_episodes: 10
@@ -51,3 +51,4 @@ checkpoint_every_n_episodes: 100
 
 # Evaluation
 eval_num_episodes: 3
+eval_num_steps: 20
