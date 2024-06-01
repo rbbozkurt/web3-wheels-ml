@@ -81,18 +81,10 @@ When you have any issues with the environment contact `rbbozkurt`.
 
 ### 3. Run the AI API
 
-To run the application, execute the `start_ai_api.sh` script with an optional port number:
+To run the application, execute the `./src/ai_api/endpoint.py` script with a port number:
 
 ```[bash]
-./start_ai_api.sh --port <port_number>
-```
-
-If no port number is provided, the application will listen on port `8080` by default.
-
-You can also display usage information by running the script with the `--help` or `-h` option:
-
-```[bash]
-./start_ai_api.sh --help
+python src/ai_api/endpoint.py --port <port_number>
 ```
 
 ## License
