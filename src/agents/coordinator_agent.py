@@ -28,7 +28,7 @@ class AICoordinator(gym.Env):
         self.model = SAC(
             "MultiInputPolicy",
             env,
-            verbose=0,
+            verbose=1,
             batch_size=config["batch_size"],
             tensorboard_log=self.logger.get_dir(),
             learning_rate=config["actor_learning_rate"],

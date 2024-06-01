@@ -24,21 +24,19 @@ num_episodes: 50 #for old training
 batch_size: 1024
 replay_buffer_capacity: 10000
 # Hyperparameters for the DdpgAgent
-actor_learning_rate: 0.001
+actor_learning_rate: 0.0001
 critic_learning_rate: 0.001
 gamma: 0.99
 tau: 0.005
 # Exploration parameters
-exploration_noise_std: 0.1
+exploration_noise_std: 0.15
 exploration_noise_clip: 0.5
 
 # Network architecture
 actor_hidden_layers:
-  - 512
   - 256
   - 128
 critic_hidden_layers:
-  - 512
   - 256
   - 128
 

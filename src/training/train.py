@@ -130,8 +130,10 @@ def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
 
 
 def train2():
-    env = RideShareEnv(config)
+    num_envs = 12  # Number of parallel environments
+    env = SubprocVecEnv([make_env() for _ in range(num_envs)])
     coordinator = AICoordinator(env, config)
+
     # Check if a saved model exists
     saved_model_path = "src/training/saved_models/trained_coordinator"
     if os.path.exists(saved_model_path + ".zip"):
@@ -146,6 +148,7 @@ def train2():
         log_interval=100,
         tb_log_name="parallel_training",
         callback=coordinator._on_step,
+        progress_bar=True,
     )
     return coordinator
 

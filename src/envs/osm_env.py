@@ -125,10 +125,24 @@ class RideShareEnv(Env):
         taxi_agents_without_passengers = [
             agent for agent in self.taxi_agents if not agent.passengers
         ]
-        num_agents_without_passengers = len(taxi_agents_without_passengers)
+
+        # Filter taxi agents whose destination does not match any passenger pickup location
+        available_taxi_agents = []
+        for taxi in taxi_agents_without_passengers:
+            matching_passenger = False
+            for passenger in self.passengers:
+                if (
+                    not passenger.is_picked_up()
+                    and taxi.destination == passenger.position["node"]
+                ):
+                    matching_passenger = True
+                    break
+            if not matching_passenger:
+                available_taxi_agents.append(taxi)
+        num_agents_without_passengers = len(available_taxi_agents)
 
         agent_positions = np.zeros((self.max_agents, 2))
-        for i, agent in enumerate(taxi_agents_without_passengers):
+        for i, agent in enumerate(available_taxi_agents):
             if i >= self.max_agents:
                 break
             agent_positions[i] = np.array(
@@ -244,7 +258,8 @@ class RideShareEnv(Env):
         """
         if seed is not None:
             random.seed(seed)
-
+        print("Total passengers completed: ", self.total_passengers_completed)
+        print("Resetting environment...")
         city = random.choice(self.cities)
         self.map_network = ox.graph_from_place(city, network_type="drive")
         self.taxi_agents = []
@@ -306,6 +321,20 @@ class RideShareEnv(Env):
         taxi_agents_without_passengers = [
             agent for agent in self.taxi_agents if not agent.passengers
         ]
+
+        # Filter taxi agents whose destination does not match any passenger pickup location
+        available_taxi_agents = []
+        for taxi in taxi_agents_without_passengers:
+            matching_passenger = False
+            for passenger in self.passengers:
+                if (
+                    not passenger.is_picked_up()
+                    and taxi.destination == passenger.position["node"]
+                ):
+                    matching_passenger = True
+                    break
+            if not matching_passenger:
+                available_taxi_agents.append(taxi)
 
         # Check if any taxi does not have passengers
         if taxi_agents_without_passengers:
