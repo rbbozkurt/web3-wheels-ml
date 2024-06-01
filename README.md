@@ -81,18 +81,248 @@ When you have any issues with the environment contact `rbbozkurt`.
 
 ### 3. Run the AI API
 
-To run the application, execute the `start_ai_api.sh` script with an optional port number:
+To run the application, execute the `./src/ai_api/endpoint.py` script with a port number:
 
 ```[bash]
-./start_ai_api.sh --port <port_number>
+python src/ai_api/endpoint.py --port <port_number>
 ```
 
-If no port number is provided, the application will listen on port `8080` by default.
+#### 1. Welcome Message
 
-You can also display usage information by running the script with the `--help` or `-h` option:
+- Endpoint: `GET /`
+- Description : Returns a welcome message
+- Success Response:
 
-```[bash]
-./start_ai_api.sh --help
+```json
+{
+  "message": "Welcome to the Web3 Wheels AI API!"
+}
+```
+
+### 2. Find Destinations
+
+- Endpoint: `POST /ai-api/find-destinations`
+
+- Description: Finds destinations for agents and passengers.
+
+- Request Example:
+
+```json
+{
+  "num_agents": 2,
+  "num_passengers": 2,
+  "agent_positions": [
+    [37.824454, -122.231589],
+    [37.821592, -122.234797]
+  ],
+  "passenger_positions": [
+    [37.824454, -122.231589],
+    [37.821592, -122.234797]
+  ],
+  "passenger_destinations": [
+    [37.824454, -122.231589],
+    [37.821592, -122.234797]
+  ]
+}
+```
+
+- Sucess Response:
+
+```json
+    [
+        {
+            "position": {
+                "node_id": 11543660372,
+                "longitude": 0.15496014168933958,
+                "latitude": 0.9391560276780935
+            }
+        },
+        ...
+    ]
+```
+
+- Error Response:
+
+```json
+{
+  "detail": "Error message"
+}
+```
+
+### 3. Find Mock Destinations
+
+- Endpoint: `POST /ai-api/mock/find-destinations`
+
+- Description: Finds the best matches for vehicles and passengers based on their node IDs.
+
+- Request Example:
+
+```json
+{
+  "vehicle_node_ids": [42433644, 1312312],
+  "passenger_node_ids": [42459032342398, 42433644, 42459098, 31231]
+}
+```
+
+- Success Response:
+
+```json
+    [
+        {
+            "vehicle_node_id": 42433644,
+            "destination_node_id": 42433644
+        },
+        ...
+    ]
+```
+
+- Error Response:
+
+```json
+{
+  "detail": "Error message"
+}
+```
+
+### 4. Find Route
+
+- Endpoint: `POST /ai-api/find-route`
+
+- Description: Finds the shortest path between two nodes in the map for a given vehicle.
+
+- Request Example:
+
+```json
+{
+  "vehicle_id": 1,
+  "source_node_id": 42433644,
+  "target_node_id": 3431231
+}
+```
+
+- Succes Response :
+
+```json
+    {
+        "vehicle_id": 1,
+        "route": [42433644, ..., 3431231]
+    }
+```
+
+- Error Response:
+
+```json
+{
+  "detail": "Error message"
+}
+```
+
+### 5. Move Agent
+
+- Endpoint: `POST /ai-api/move-agent`
+
+- Description: Moves the agent to the next node based on the provided agent information.
+
+- Request Example:
+
+```json
+{
+  "vehicle_id": 1,
+  "next_node_id": 2
+}
+```
+
+- Success Response:
+
+```json
+{
+  "vehicle_id": 1,
+  "position": {
+    "node_id": 2,
+    "longitude": 37.824454,
+    "latitude": -122.231589
+  }
+}
+```
+
+- Error Response:
+
+```json
+{
+  "detail": "Error message"
+}
+```
+
+### 6. Find Closest Node:
+
+- Endpoint: `POST /map-api/find-closest-node`
+
+- Description: Finds the closest node in the graph to a given vehicle's position.
+
+- Request Example:
+
+```json
+{
+  "vehicle_id": 0,
+  "position": {
+    "longitude": 132.32131,
+    "latitude": -32.321
+  }
+}
+```
+
+- Success Response:
+
+```json
+{
+  "vehicle_id": 0,
+  "position": {
+    "node_id": 42433644,
+    "longitude": 132.32131,
+    "latitude": -32.321
+  }
+}
+```
+
+- Error Response:
+
+```json
+{
+  "detail": "Error message"
+}
+```
+
+### 7. Find Distance
+
+- Endpoint: `POST /map-api/find-distance`
+
+- Description: Calculates the distance between two nodes in the map.
+
+- Request Example:
+
+```json
+{
+  "passenger_id": 1,
+  "source_node_id": 2,
+  "target_node_id": 3
+}
+```
+
+- Success Response:
+
+```json
+{
+  "passenger_id": 1,
+  "distance": 1000
+}
+```
+
+- Error Response:
+
+```json
+{
+  "detail": "Error message"
+}
 ```
 
 ## License

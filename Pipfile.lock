@@ -1644,11 +1644,11 @@
     },
     "requests": {
       "hashes": [
-        "sha256:dd951ff5ecf3e3b3aa26b40703ba77495dab41da839ae72ef3c8e5d8e2433289",
-        "sha256:fc06670dd0ed212426dfeb94fc1b983d917c4f9847c863f313c9dfaaffb7c23c"
+        "sha256:55365417734eb18255590a9ff9eb97e9e1da868d4ccd6402399eaf68af20a760",
+        "sha256:70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6"
       ],
       "markers": "python_version >= '3.8'",
-      "version": "==2.32.2"
+      "version": "==2.32.3"
     },
     "rich": {
       "hashes": [
@@ -2348,6 +2348,14 @@
       "markers": "python_version >= '3.8'",
       "version": "==4.4.0"
     },
+    "appnope": {
+      "hashes": [
+        "sha256:1de3860566df9caf38f01f86f65e0e13e379af54f9e4bee1e66b48f2efffd1ee",
+        "sha256:502575ee11cd7a28c0205f379b525beefebab9d161b7c964670864014ed7213c"
+      ],
+      "markers": "platform_system == 'Darwin'",
+      "version": "==0.1.4"
+    },
     "argon2-cffi": {
       "hashes": [
         "sha256:879c3e79a2729ce768ebb7d36d4609e3a78a4ca2ec3a9f12286ca057e3d0db08",
@@ -2942,11 +2950,11 @@
     },
     "jupyter-server": {
       "hashes": [
-        "sha256:659154cea512083434fd7c93b7fe0897af7a2fd0b9dd4749282b42eaac4ae677",
-        "sha256:fb6be52c713e80e004fac34b35a0990d6d36ba06fd0a2b2ed82b899143a64210"
+        "sha256:12558d158ec7a0653bf96cc272bc7ad79e0127d503b982ed144399346694f726",
+        "sha256:16f7177c3a4ea8fe37784e2d31271981a812f0b2874af17339031dc3510cc2a5"
       ],
       "markers": "python_version >= '3.8'",
-      "version": "==2.14.0"
+      "version": "==2.14.1"
     },
     "jupyter-server-terminals": {
       "hashes": [
@@ -3514,11 +3522,11 @@
     },
     "requests": {
       "hashes": [
-        "sha256:dd951ff5ecf3e3b3aa26b40703ba77495dab41da839ae72ef3c8e5d8e2433289",
-        "sha256:fc06670dd0ed212426dfeb94fc1b983d917c4f9847c863f313c9dfaaffb7c23c"
+        "sha256:55365417734eb18255590a9ff9eb97e9e1da868d4ccd6402399eaf68af20a760",
+        "sha256:70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6"
       ],
       "markers": "python_version >= '3.8'",
-      "version": "==2.32.2"
+      "version": "==2.32.3"
     },
     "rfc3339-validator": {
       "hashes": [

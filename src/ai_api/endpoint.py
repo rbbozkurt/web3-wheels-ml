@@ -6,6 +6,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import asyncio
 from typing import Any, Dict
 
 import networkx as nx
@@ -19,6 +20,7 @@ from pydantic import BaseModel
 
 import openstreetsmap_api as osm
 
+
 project_root = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
 )  # TODO: Fix paths for import if possible
@@ -28,6 +30,7 @@ from src.envs.osm_env import RideShareEnv
 
 # Initialize FastAPI app
 app = FastAPI()
+lock = asyncio.Lock()
 
 # Example graph for demonstration
 city = "Piedmont, California, USA"
@@ -52,47 +55,39 @@ def deserialize_graph(data: Dict[str, Any]) -> nx.MultiDiGraph:
     return nx.node_link_graph(data)
 
 
+
+# works
+
 @app.get("/")
 async def read_root():
     return {"message": "Welcome to the Web3 Wheels AI API!"}
 
 
 # Endpoint to get the serialized graph
-@app.get("/graph", response_model=Dict[str, Any])
+# TODO check again
+@app.get("/graph")
 async def get_graph():
-    try:
-        graph_data = serialize_graph(G)
-        return graph_data
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    async with lock:
+        try:
+            graph_data = serialize_graph(G)
+            return graph_data
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
 
 # Endpoint to create or update the graph
 @app.post("/graph")
 async def update_graph(graph_data: Dict[str, Any]):
-    try:
-        global G
-        G = deserialize_graph(graph_data)
-        return {"message": "Graph created/updated successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    async with lock:
+        try:
+            global G
+            G = deserialize_graph(graph_data)
+            return {"message": "Graph created/updated successfully"}
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
 
-# Endpoint to perform a prediction or operation using the graph
-@app.post("/graph/predict")
-async def predict(graph_data: Dict[str, Any]):
-    try:
-        graph = deserialize_graph(graph_data.dict())
-        # Here you would integrate your prediction logic using the graph
-        # For demonstration, we'll just return the number of nodes and edges
-        num_nodes = graph.number_of_nodes()
-        num_edges = graph.number_of_edges()
-        return {"num_nodes": num_nodes, "num_edges": num_edges}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.get("/ai-api/find-destinations")
+@app.post("/ai-api/find-destinations")
 async def find_destinations(data: Dict[str, Any]):
     """
     Find destinations for agents and passengers.
@@ -132,35 +127,145 @@ async def find_destinations(data: Dict[str, Any]):
 
     The function takes a dictionary `data` as input, which contains information about the number of agents, passengers, their positions, and destinations. It then processes the data and returns a list of actions for the agents. If an error occurs during the processing, an HTTPException with a status code of 400 and the error message is raised.
     """
-    try:
-        global G
-        print("data", data)
-        print("type of data", type(data))
-        # numpy array with size of (10, 2)
-        actions = trained_coordinator.inference(
-            data
-        )  # TODO replace with actual coordinator call
-        print("actions", actions)
-        # take first data.num_agents from array
-        agents_actions = actions[: data["num_agents"]]
-        agents_actions_list = agents_actions.tolist()
-        # Convert list of actions to the specified format
-        result = [
-            {
-                "position": {
-                    "node_id": osm.find_closest_node(G, action[0], action[1]),
-                    "longitude": action[0],
-                    "latitude": action[1],
+
+    async with lock:
+        try:
+            global G
+            print("Received data: ", data)
+            print("Type of received data: ", type(data))
+
+            actions = np.random.rand(10, 2)  # TODO replace with actual coordinator call
+            print("Generated actions: ", actions)
+
+            agents_actions = actions[: data["num_agents"]]
+            print("Agent actions: ", agents_actions)
+
+            agents_actions_list = agents_actions.tolist()
+            print("Agent actions list: ", agents_actions_list)
+
+            result = [
+                {
+                    "position": {
+                        "node_id": osm.find_closest_node(G, action[0], action[1]),
+                        "longitude": action[0],
+                        "latitude": action[1],
+                    }
+
                 }
-            }
-            for i, action in enumerate(agents_actions_list)
-        ]
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+                for i, action in enumerate(agents_actions_list)
+            ]
+            print("Result: ", result)
+            return result
+        except Exception as e:
+            print("An error occurred: ", str(e))
+            raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/ai-api/move-agent")
+@app.post("/ai-api/mock/find-destinations")
+async def find_mock_destinations(data: Dict[str, Any]):
+    """
+    This function is an endpoint that finds the best matches for vehicles and passengers based on their node IDs.
+
+    It accepts a POST request with a JSON body containing two arrays: 'vehicle_node_ids' and 'passenger_node_ids'.
+    Each array should contain integers representing node IDs.
+
+    Example request body:
+    {
+        "vehicle_node_ids": [42433644,1312312],
+        "passenger_node_ids": [42459032342398,42433644, 42459098, 31231]
+    }
+
+    The function returns a list of dictionaries. Each dictionary contains a 'vehicle_node_id' and a 'destination_node_id'.
+    The 'destination_node_id' is the best match for the corresponding 'vehicle_node_id'.
+
+    Example response:
+    [
+        {
+            "vehicle_node_id": 42433644,
+            "destination_node_id": 42433644
+        }
+    ]
+
+    If an error occurs during the process, it raises an HTTPException with status code 400 and the error message as detail.
+
+    :param data: A dictionary containing two keys: 'vehicle_node_ids' and 'passenger_node_ids'.
+                 Each key corresponds to an array of integers representing node IDs.
+    :return: A list of dictionaries. Each dictionary contains a 'vehicle_node_id' and a 'destination_node_id'.
+    """
+    async with lock:
+        try:
+            print("Received data: ", data)
+            print("Type of received data: ", type(data))
+
+            global G
+            matches = osm.find_best_matches(
+                G, data["vehicle_node_ids"], data["passenger_node_ids"]
+            )
+            print("Matches: ", matches)
+
+            result = [
+                {"vehicle_node_id": agent, "destination_node_id": match}
+                for agent, match in matches
+            ]
+            print("Result: ", result)
+            return result
+        except Exception as e:
+            print("An error occurred: ", str(e))
+            raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/ai-api/find-route")
+async def find_route(data: Dict[str, Any]):
+    """
+    Find the shortest path between two nodes in the map for a given vehicle.
+
+    Args:
+        data (Dict[str, Any]): A dictionary containing the following keys:
+            - vehicle_id (Any): The ID of the vehicle.
+            - source_node_id (Any): The ID of the source node.
+            - target_node_id (Any): The ID of the target node.
+
+        eg. data = {
+            "vehicle_id": 1,
+            "source_node_id": 42433644,
+            "target_node_id": 42433644,
+        }
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the vehicle ID and the shortest route from source node to target node.
+
+        eg. return {
+            "vehicle_id": 1,
+            "route": [
+                42433644
+            ]
+        }
+
+    Raises:
+        HTTPException: If an error occurs during the route finding process.
+    """
+
+    async with lock:
+        try:
+            print("Received data for find-route: ", data)
+            print("Type of received data: ", type(data))
+
+            shortest_path = osm.find_route(
+                G, data["source_node_id"], data["target_node_id"]
+            )
+            print("Shortest path: ", shortest_path)
+
+            result = {"vehicle_id": data["vehicle_id"], "route": shortest_path}
+            print("Result: ", result)
+
+            return result
+        except Exception as e:
+            print("An error occurred: ", str(e))
+            raise HTTPException(status_code=400, detail=str(e))
+
+
+# WORKS
+@app.post("/ai-api/move-agent")
 async def move_agent(agent: Dict[str, Any]):
     """
     Move the agent to the next node based on the provided agent information.
@@ -188,71 +293,97 @@ async def move_agent(agent: Dict[str, Any]):
     Raises:
         HTTPException: If an error occurs during the movement of the agent.
     """
-    try:
-        global G
-        print("agent", agent)
-        longitude, latitude = osm.find_x_y_coordinates_of_node(G, agent["next_node_id"])
-        return {
-            "vehicle_id": agent["vehicle_id"],
-            "position": {
-                "node_id": agent["next_node_id"],
-                "longitude": longitude,
-                "latitude": latitude,
-            },
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    async with lock:
+        try:
+            global G
+            print("Received agent data: ", agent)
+            print("Type of received agent data: ", type(agent))
+
+            longitude, latitude = osm.find_x_y_coordinates_of_node(
+                G, agent["next_node_id"]
+            )
+            print("Longitude and Latitude: ", longitude, latitude)
+
+            result = {
+                "vehicle_id": agent["vehicle_id"],
+                "position": {
+                    "node_id": agent["next_node_id"],
+                    "longitude": longitude,
+                    "latitude": latitude,
+                },
+            }
+            print("Result: ", result)
+
+            return result
+        except Exception as e:
+            print("An error occurred: ", str(e))
+            raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/map-api/find-closest-node")
-async def find_closest_node(data: Dict[str, Any]):
+class VehicleData(BaseModel):
+    vehicle_id: int
+    position: Dict[str, float]
+
+
+# WORKS
+@app.post("/map-api/find-closest-node")
+async def find_closest_node(data: VehicleData):
     """
-    Find the closest node in the map to the given vehicle's position.
+    This endpoint finds the closest node in the graph to a given vehicle's position.
+
+    It locks the global graph `G` to prevent concurrent modifications, then uses the `osm.find_closest_node`
+    function to find the closest node to the vehicle's position. It then retrieves the longitude and latitude
+    of the closest node using the `osm.find_x_y_coordinates_of_node` function.
 
     Args:
-        data (Dict[str, Any]): A dictionary containing information about the vehicle.
-
-        eg. data = {
-            "vehicle_id": 1,
-            "position": {
-                "longitude": 23.824454,
-                "latitude": -112.54332,
-            },
-        }
+        data (VehicleData): A Pydantic model instance containing the vehicle's data.
+            It should be in the following format:
+            {
+                "vehicle_id" : 0,
+                "position" : {
+                    "longitude" : 132.32131,
+                    "latitude" : -32.321
+                }
+            }
 
     Returns:
-        Dict[str, Any]: A dictionary containing the vehicle's ID and the closest node's ID, longitude, and latitude.
+        dict: A dictionary containing the vehicle's ID and the closest node's ID, longitude, and latitude.
 
-        eg. return {
-            "vehicle_id": 1,
-            "position": {
-                "node_id": 2,
-                "longitude": 37.824454,
-                "latitude": -122.231589,
-            },
-        }
+    Raises:
+        HTTPException: If an error occurs, an HTTPException is raised with status code 400 and the error message.
     """
-    try:
-        global G
-        print("vehicle", data)
-        closest_node_id = osm.find_closest_node(
-            G, data["position"]["longitude"], data["position"]["latitude"]
-        )
-        print("closest_node_id", closest_node_id)
-        longitude, latitude = osm.find_x_y_coordinates_of_node(G, closest_node_id)
-        return {
-            "vehicle_id": data["vehicle_id"],
-            "position": {
-                "node_id": closest_node_id,
-                "longitude": longitude,
-                "latitude": latitude,
-            },
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    async with lock:
+        try:
+            global G
+            print("Received vehicle data: ", data)
+            print("Type of received vehicle data: ", type(data))
+
+            closest_node_id = osm.find_closest_node(
+                G, data.position["longitude"], data.position["latitude"]
+            )
+            print("Closest node ID: ", closest_node_id)
+
+            longitude, latitude = osm.find_x_y_coordinates_of_node(G, closest_node_id)
+            print("Longitude and Latitude: ", longitude, latitude)
+
+            result = {
+                "vehicle_id": data.vehicle_id,
+                "position": {
+                    "node_id": closest_node_id,
+                    "longitude": longitude,
+                    "latitude": latitude,
+                },
+            }
+            print("Result: ", result)
+
+            return result
+        except Exception as e:
+            print("An error occurred: ", str(e))
+            raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/map-api/find-distance")
+# WORKS
+@app.post("/map-api/find-distance")
 async def find_distance(data: Dict[str, Any]):
     """
     Calculate the distance between two nodes in the map.
@@ -281,12 +412,24 @@ async def find_distance(data: Dict[str, Any]):
     Raises:
         HTTPException: If an error occurs during the distance calculation.
     """
-    try:
-        global G
-        distance = osm.find_distance(G, data["source_node_id"], data["target_node_id"])
-        return {"passenger_id": data["passenger_id"], "distance": distance}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    async with lock:
+        try:
+            global G
+            print("Received data for find-distance: ", data)
+            print("Type of received data: ", type(data))
+
+            distance = osm.find_distance(
+                G, data["source_node_id"], data["target_node_id"]
+            )
+            print("Calculated distance: ", distance)
+
+            result = {"passenger_id": data["passenger_id"], "distance": distance}
+            print("Result: ", result)
+
+            return result
+        except Exception as e:
+            print("An error occurred: ", str(e))
+            raise HTTPException(status_code=400, detail=str(e))
 
 
 # Run the app with Uvicorn on a custom port
