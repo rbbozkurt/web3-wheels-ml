@@ -4,7 +4,22 @@
 # List of cities for training
 cities:
   #- "Piedmont, California, USA"
-  - "Manhattan, New York City, New York, USA"
+  #- "Manhattan, New York City, New York, USA"
+  - "San Francisco, California, USA"
+  - "Washington, D.C., USA"
+  - "Miami, Florida, USA"
+  - "Boston, Massachusetts, USA"
+  - "Seattle, Washington, USA"
+  - "New Orleans, Louisiana, USA"
+  - "Vancouver, British Columbia, Canada"
+  - "Amsterdam, Netherlands"
+  - "Venice, Italy"
+  - "Barcelona, Spain"
+  - "Prague, Czech Republic"
+  - "Edinburgh, Scotland, United Kingdom"
+  - "Stockholm, Sweden"
+  - "Copenhagen, Denmark"
+  - "Budapest, Hungary"
 # Maximum number of taxis in the environment
 max_taxis: 10
 
@@ -17,15 +32,14 @@ passenger_spawn_probability: 0.1
 # Training amount
 time_interval: 10 # Time interval - basically agent speed
 max_time_steps: 1024 # for each episode
-total_time_steps: 100000 # for the entire training. for train2
+total_time_steps: 500000 # for the entire training. for train2
 
 # Training parameters
-num_episodes: 50 #for old training
-batch_size: 1024
+batch_size: 256
 replay_buffer_capacity: 10000
 # Hyperparameters for the DdpgAgent
-actor_learning_rate: 0.0001
-critic_learning_rate: 0.001
+actor_learning_rate: 0.00001
+critic_learning_rate: 0.0001
 gamma: 0.99
 tau: 0.005
 # Exploration parameters
@@ -34,6 +48,7 @@ exploration_noise_clip: 0.5
 
 # Network architecture
 actor_hidden_layers:
+  - 512
   - 256
   - 128
 critic_hidden_layers:
@@ -41,7 +56,7 @@ critic_hidden_layers:
   - 128
 
 # Training frequency
-train_every_n_steps: 500
+train_every_n_steps: 100
 gradient_steps: -1
 
 # Logging and checkpointing

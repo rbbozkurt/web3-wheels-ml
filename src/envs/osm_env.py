@@ -22,8 +22,8 @@ class RideShareEnv(Env):
         """
         self.config = config
         self.cities = config["cities"]
-        city = random.choice(self.cities)
-        self.map_network = ox.graph_from_place(city, network_type="drive")
+        self.city = random.choice(self.cities)
+        self.map_network = ox.graph_from_place(self.city, network_type="drive")
         self.taxi_agents = []
         self.passengers = []
         self.max_agents = config["max_taxis"]
@@ -260,8 +260,8 @@ class RideShareEnv(Env):
             random.seed(seed)
         print("Total passengers completed: ", self.total_passengers_completed)
         print("Resetting environment...")
-        city = random.choice(self.cities)
-        self.map_network = ox.graph_from_place(city, network_type="drive")
+        self.city = random.choice(self.cities)
+        self.map_network = ox.graph_from_place(self.city, network_type="drive")
         self.taxi_agents = []
         self.passengers = []
         self.action_space = self._get_action_space()
@@ -284,6 +284,9 @@ class RideShareEnv(Env):
         - Check for ride completion, passenger pickup and other events
         - Calculate and return rewards, next observations, done flags, and info
         """
+        rewards = 0
+        reward_pickup = 0
+        reward_dropoff = 0
         for taxi in self.taxi_agents:
             taxi.action_move(self.time_interval)
 
@@ -297,6 +300,7 @@ class RideShareEnv(Env):
                     # Passenger pickup event
                     if not taxi.passengers:  # If the taxi does not have a passenger
                         taxi.action_pickup(passenger)
+                        reward_pickup += 0.5
 
                 elif (
                     taxi.position["node"] == passenger.destination["node"]
@@ -304,6 +308,7 @@ class RideShareEnv(Env):
                 ):
                     # Passenger drop-off event
                     taxi.action_dropoff(passenger)
+                    reward_dropoff += 1
                     passenger.set_completed(True)
                     self.total_passengers_completed += 1
 
@@ -363,8 +368,8 @@ class RideShareEnv(Env):
             actions = None
 
         # Calculate rewards based on passenger waiting time and ride completion
-        rewards = reward_function_2(self, self.current_time_step)
-        total_reward = np.sum(rewards)
+        rewards += reward_function_2(self, self.current_time_step)
+        total_reward = rewards + reward_pickup + reward_dropoff
         # Check if the episode is done
         terminated, truncated = self._is_done()
         self.current_time_step += 1

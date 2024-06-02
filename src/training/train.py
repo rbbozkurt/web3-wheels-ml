@@ -34,7 +34,7 @@ def make_env():
 
 
 def train(num_episodes, batch_size, replay_buffer_capacity, num_training_steps):
-    num_envs = 12  # Number of parallel environments
+    num_envs = 1  # Number of parallel environments
     env = SubprocVecEnv([make_env() for _ in range(num_envs)])
     coordinator = AICoordinator(env, config)
     # Check if a saved model exists

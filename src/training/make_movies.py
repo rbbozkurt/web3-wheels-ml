@@ -64,7 +64,7 @@ def make_movies(num_episodes, num_steps):
             passengers_delivered = info["passengers_delivered"]
             # Render the environment for the current frame
             env.render(ax=ax, output_file=None)
-            ax.set_title(f"Episode {episode+1} - Step: {frame}")
+            ax.set_title(f"Episode {episode+1} - Step: {frame} City: {env.city}")
 
         episode_rewards.append(episode_reward)
         episode_passengers_delivered.append(passengers_delivered)
@@ -98,6 +98,6 @@ def make_movies(num_episodes, num_steps):
 
 
 if __name__ == "__main__":
-    num_episodes = 1  # Specify the number of episodes to evaluate
-    num_steps = 1000  # Specify the number of steps in each episode
+    num_episodes = 5  # Specify the number of episodes to evaluate
+    num_steps = 100  # Specify the number of steps in each episode
     make_movies(num_episodes, num_steps)

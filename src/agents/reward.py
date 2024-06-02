@@ -53,12 +53,12 @@ def reward_function_2(env, current_time_step):
                 reward += 2  # Reward for assigning the correct destination
 
         # Check if the taxi has picked up a passenger
-        if taxi.passengers:
-            for passenger in taxi.passengers:
-                if passenger.is_picked_up() and not passenger.is_completed():
-                    reward += 0.1  # Reward for passenger pickup
-                elif passenger.is_completed():
-                    reward += 0.5  # Reward for successful ride completion
+        # if taxi.passengers:
+        #     for passenger in taxi.passengers:
+        #         if passenger.is_picked_up() and not passenger.is_completed():
+        #             reward += 0.1  # Reward for passenger pickup
+        #         elif passenger.is_completed():
+        #             reward += 0.5  # Reward for successful ride completion
 
         # Penalize if the taxi has no assigned destination and there are passengers waiting
         if not taxi.destination and any(not p.is_picked_up() for p in env.passengers):
@@ -73,7 +73,7 @@ def reward_function_2(env, current_time_step):
             # passenger.update_waiting_time()
             waiting_time_minutes = current_time_step - passenger.ride_request_time
             total_reward -= (
-                0.00001 * waiting_time_minutes
+                0.0001 * waiting_time_minutes
             )  # Penalty scaled down based on waiting time in minutes
 
     return total_reward

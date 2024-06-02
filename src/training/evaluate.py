@@ -67,6 +67,6 @@ def evaluate(num_episodes, num_steps):
 
 
 if __name__ == "__main__":
-    num_episodes = 1  # Specify the number of episodes to evaluate
+    num_episodes = 5  # Specify the number of episodes to evaluate
     num_steps = 400  # Specify the number of steps in each episode
     evaluate(num_episodes, num_steps)

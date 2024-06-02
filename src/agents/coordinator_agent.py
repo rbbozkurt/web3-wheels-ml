@@ -28,12 +28,12 @@ class AICoordinator(gym.Env):
         self.model = SAC(
             "MultiInputPolicy",
             env,
-            verbose=1,
+            verbose=0,
             batch_size=config["batch_size"],
-            tensorboard_log=self.logger.get_dir(),
+            # tensorboard_log=self.logger.get_dir(),
             learning_rate=config["actor_learning_rate"],
-            gamma=config["gamma"],
-            tau=config["tau"],
+            # gamma=config["gamma"],
+            # tau=config["tau"],
             train_freq=(config["train_every_n_steps"], "step"),
             gradient_steps=config["gradient_steps"],
             policy_kwargs={
