@@ -13,18 +13,36 @@ import networkx as nx
 import numpy as np
 import osmnx as ox
 import uvicorn
+import yaml
 from fastapi import FastAPI, HTTPException
 from networkx.readwrite import json_graph
 from pydantic import BaseModel
 
 import openstreetsmap_api as osm
 
+
+project_root = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
+)  # TODO: Fix paths for import if possible
+sys.path.append(project_root)
+from src.agents.coordinator_agent import AICoordinator
+from src.envs.osm_env import RideShareEnv
+
 # Initialize FastAPI app
 app = FastAPI()
 lock = asyncio.Lock()
 
 # Example graph for demonstration
-G = osm.G_map_from_address("350 5th Ave, New York, New York")
+city = "Piedmont, California, USA"
+G = osm.G_map_from_address("350 5th Ave, New York, New York")  # TODO Try new city
+
+# Initialize AI Coordinator
+with open("src/training/ppo_config.yml", "r") as f:
+    config = yaml.safe_load(f)
+trained_coordinator = AICoordinator(RideShareEnv(map_area=city), config)
+trained_coordinator.model = trained_coordinator.model.load(
+    "src/training/saved_models/trained_coordinator"
+)
 
 
 # Function to serialize a graph to a dictionary
@@ -37,8 +55,8 @@ def deserialize_graph(data: Dict[str, Any]) -> nx.MultiDiGraph:
     return nx.node_link_graph(data)
 
 
-# works
 
+# works
 
 @app.get("/")
 async def read_root():
@@ -109,6 +127,7 @@ async def find_destinations(data: Dict[str, Any]):
 
     The function takes a dictionary `data` as input, which contains information about the number of agents, passengers, their positions, and destinations. It then processes the data and returns a list of actions for the agents. If an error occurs during the processing, an HTTPException with a status code of 400 and the error message is raised.
     """
+
     async with lock:
         try:
             global G
@@ -131,6 +150,7 @@ async def find_destinations(data: Dict[str, Any]):
                         "longitude": action[0],
                         "latitude": action[1],
                     }
+
                 }
                 for i, action in enumerate(agents_actions_list)
             ]

@@ -59,7 +59,7 @@ def test_adding_taxi_agents():
 
 def test_agent_movement():
     # Create a ride-sharing environment
-    map_area = "Piedmont, California, USA"
+    map_area = "Manhattan, New York City, New York, USA"
     env = RideShareEnv(map_area)
 
     # Create some sample car information
@@ -69,7 +69,7 @@ def test_agent_movement():
         "description": "Sedan",
         "mileage_km": 10000,
         "tankCapacity": 50,
-        "position": {"latitude": 37.824454, "longitude": -122.231589},
+        "position": {"latitude": 40.712776, "longitude": -74.005974},
     }
 
     # Create agent instances using the car information
@@ -79,7 +79,7 @@ def test_agent_movement():
     env.add_agent(agent_1)
 
     # Set a destination for the agent
-    destination = ox.distance.nearest_nodes(env.map_network, -122.234797, 37.821592)
+    destination = ox.distance.nearest_nodes(env.map_network, 40.718407, -74.007068)
     agent_1.set_destination(destination)
 
     # Step through time until the agent reaches the destination
@@ -103,13 +103,13 @@ def test_agent_movement():
             agent_1.action_move()
 
             # Render the environment for the current frame
-            env.render(ax=ax, route=path, output_file=None)
+            env.render(ax=ax, output_file=None)
 
             # Set the title for the current frame
             ax.set_title(f"Step: {frame}")
 
     # Get the shortest path from the agent's current position to the destination
-    path = env.get_route(agent_1.position["node"], destination)
+    # path = env.get_route(agent_1.position["node"], destination)
 
     # Create the animation
     ani = animation.FuncAnimation(fig, update, frames=max_steps, interval=500)

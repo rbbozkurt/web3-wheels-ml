@@ -30,7 +30,7 @@ def reward_function_basic(env):
     return rewards
 
 
-def reward_function_2(env):
+def reward_function_2(env, current_time_step):
     """
     Calculate the reward for the current state of the environment and agents.
     - Consider factors like waiting time, fuel efficiency, ride completion, etc.
@@ -39,7 +39,8 @@ def reward_function_2(env):
     - Rewards if the assigned taxi destination matches a passenger pickup position
     """
 
-    rewards = []
+    total_reward = 0
+
     for taxi in env.taxi_agents:
         reward = 0
 
@@ -49,29 +50,30 @@ def reward_function_2(env):
                 not passenger.is_picked_up()
                 and taxi.destination == passenger.position["node"]
             ):
-                reward += 20  # Reward for assigning the correct destination
-                break
+                reward += 2  # Reward for assigning the correct destination
 
         # Check if the taxi has picked up a passenger
-        if taxi.passengers:
-            for passenger in taxi.passengers:
-                if passenger.is_picked_up() and not passenger.is_completed():
-                    reward += 50  # Reward for passenger pickup
-                elif passenger.is_completed():
-                    reward += 50  # Reward for successful ride completion
+        # if taxi.passengers:
+        #     for passenger in taxi.passengers:
+        #         if passenger.is_picked_up() and not passenger.is_completed():
+        #             reward += 0.1  # Reward for passenger pickup
+        #         elif passenger.is_completed():
+        #             reward += 0.5  # Reward for successful ride completion
 
         # Penalize if the taxi has no assigned destination and there are passengers waiting
         if not taxi.destination and any(not p.is_picked_up() for p in env.passengers):
-            reward -= 10  # Penalty for not having an assigned destination when passengers are waiting
+            reward -= 0.1  # Penalty for not having an assigned destination when passengers are waiting
 
-        rewards.append(reward)
+        total_reward += reward
 
     # Additional rewards/penalties based on passenger waiting time
     for passenger in env.passengers:
         if not passenger.is_picked_up():
             # Negative reward for each time step passenger is waiting
-            passenger.update_waiting_time()
-            reward -= -5  # -0.1 * passenger.waiting_time - 5
-        rewards.append(reward)
+            # passenger.update_waiting_time()
+            waiting_time_minutes = current_time_step - passenger.ride_request_time
+            total_reward -= (
+                0.0001 * waiting_time_minutes
+            )  # Penalty scaled down based on waiting time in minutes
 
-    return rewards
+    return total_reward

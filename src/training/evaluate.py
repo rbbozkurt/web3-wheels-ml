@@ -20,76 +20,53 @@ with open("src/training/ppo_config.yml", "r") as f:
     config = yaml.safe_load(f)
 
 
-def evaluate(coordinator, num_episodes):
-    total_reward = 0
+def evaluate(num_episodes, num_steps):
+    env = RideShareEnv(config)
+    coordinator = AICoordinator(env, config)
+
+    # Load the trained model
+    saved_model_path = "src/training/saved_models/trained_coordinator"
+    if os.path.exists(saved_model_path + ".zip"):
+        coordinator.model.load(saved_model_path, env=env)
+        print("Loaded trained model.")
+    else:
+        print("No trained model found. Please train the model first.")
+        return
+
+    env.coordinator = coordinator
+
+    episode_rewards = []
+    episode_passengers_delivered = []
 
     for episode in range(num_episodes):
-        # Pick a city randomly from the list of cities for evaluation
-        city = random.choice(config["cities"])
-        env = RideShareEnv(city)
-        env.coordinator = coordinator
-        done = False
+        obs, _ = env.reset()
+        terminated, truncated = False, False
         episode_reward = 0
+        passengers_delivered = 0
 
-        # Create random taxis and place them in random locations in the city
-        num_taxis = random.randint(1, config["max_taxis"])
-        for _ in range(num_taxis):
-            taxi_info = {
-                "name": f"Taxi_{_}",
-                "vin": f"VIN_{_}",
-                "description": "Random Taxi",
-                "mileage_km": random.randint(1000, 10000),
-                "tankCapacity": random.randint(40, 60),
-                "position": {
-                    "latitude": random.uniform(env.map_bounds[1], env.map_bounds[3]),
-                    "longitude": random.uniform(env.map_bounds[0], env.map_bounds[2]),
-                },
-            }
-            taxi_agent = TaxiAgent(env, taxi_info)
-            env.add_agent(taxi_agent)
+        for step in range(num_steps):
+            action, _ = coordinator.model.predict(obs, deterministic=True)
+            obs, reward, terminated, truncated, info = env.step(action)
+            episode_reward += reward
+            passengers_delivered = info["passengers_delivered"]
 
-        while not done:
-            # Probabilistically add passengers to random locations on the map
-            if random.random() < config["passenger_spawn_probability"]:
-                if len(env.passengers) < config["max_passengers"]:
-                    passenger_info = {
-                        "passenger_id": len(env.passengers) + 1,
-                        "pickup_location": {
-                            "latitude": random.uniform(
-                                env.map_bounds[1], env.map_bounds[3]
-                            ),
-                            "longitude": random.uniform(
-                                env.map_bounds[0], env.map_bounds[2]
-                            ),
-                        },
-                        "destination": {
-                            "latitude": random.uniform(
-                                env.map_bounds[1], env.map_bounds[3]
-                            ),
-                            "longitude": random.uniform(
-                                env.map_bounds[0], env.map_bounds[2]
-                            ),
-                        },
-                    }
-                    passenger = Passenger(**passenger_info)
-                    env.add_passenger(passenger)
+        episode_rewards.append(episode_reward)
+        episode_passengers_delivered.append(passengers_delivered)
 
-            next_observation, actions, rewards, done, _ = env.step(time_interval=2)
-            episode_reward += sum(rewards)
+        print(
+            f"Episode {episode + 1}: Reward = {episode_reward}, Passengers Delivered = {passengers_delivered}"
+        )
 
-        total_reward += episode_reward
-        print(f"Episode {episode+1}: Reward = {episode_reward}")
+    average_reward = sum(episode_rewards) / num_episodes
+    average_passengers_delivered = sum(episode_passengers_delivered) / num_episodes
 
-    average_reward = total_reward / num_episodes
-    print(f"Average Reward over {num_episodes} episodes: {average_reward}")
+    print(f"\nAverage Reward over {num_episodes} episodes: {average_reward}")
+    print(
+        f"Average Passengers Delivered over {num_episodes} episodes: {average_passengers_delivered}"
+    )
 
 
 if __name__ == "__main__":
-    # Load the trained coordinator
-    trained_coordinator = AICoordinator(RideShareEnv(), config)
-    trained_coordinator.model = trained_coordinator.model.load(
-        "src/training/saved_models/trained_coordinator"
-    )
-
-    num_episodes = config["eval_num_episodes"]
-    evaluate(trained_coordinator, num_episodes)
+    num_episodes = 5  # Specify the number of episodes to evaluate
+    num_steps = 400  # Specify the number of steps in each episode
+    evaluate(num_episodes, num_steps)

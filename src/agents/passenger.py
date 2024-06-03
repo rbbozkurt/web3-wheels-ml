@@ -13,10 +13,12 @@ class Passenger:
     ):
         self.passenger_id = passenger_id
         self.pickup_location = {
+            "node": pickup_location["node"],
             "longitude": pickup_location["longitude"],
             "latitude": pickup_location["latitude"],
         }
         self.destination = {
+            "node": destination["node"],
             "longitude": destination["longitude"],
             "latitude": destination["latitude"],
         }
